@@ -46,6 +46,7 @@ def copy_templates
   copy_file ".rubocop.yml"
   copy_file ".simplecov"
 
+  directory "config", force: true
   directory "lib", force: true
   directory "spec", force: true
 end
