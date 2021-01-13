@@ -38,10 +38,6 @@ def add_static
   route "root to: 'static#home'"
 end
 
-def testing_setup
-  generate "rspec:install"
-end
-
 def copy_templates
   remove_dir "spec"
 
@@ -72,7 +68,6 @@ after_bundle do
   set_application_name
   stop_spring
   add_static
-  # testing_setup
   copy_templates
   database_setup
 
