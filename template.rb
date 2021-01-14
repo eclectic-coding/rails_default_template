@@ -6,6 +6,8 @@ def add_template_repository_to_source_path
 end
 
 def add_gems
+  gem "rexml"
+
   gem_group :development, :test do
     gem "capybara", ">= 2.15"
     gem "database_cleaner"
