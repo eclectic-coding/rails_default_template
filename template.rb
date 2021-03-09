@@ -24,7 +24,6 @@ def add_gems
   gem "rexml"
 
   gem_group :development, :test do
-    gem "capybara", ">= 2.15"
     gem "database_cleaner"
     gem "factory_bot_rails", git: "http://github.com/thoughtbot/factory_bot_rails"
     gem "rspec-rails"
