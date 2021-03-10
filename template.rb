@@ -21,8 +21,6 @@ def add_template_repository_to_source_path
 end
 
 def add_gems
-  gem "rexml"
-
   gem_group :development, :test do
     gem "database_cleaner"
     gem "factory_bot_rails", git: "http://github.com/thoughtbot/factory_bot_rails"
@@ -39,6 +37,7 @@ def add_gems
   end
 
   gem_group :test do
+    gem "rexml" # Added to fix error until selenium-webdriver updated to v.4
     gem "simplecov", require: false
   end
 
@@ -82,6 +81,7 @@ add_template_repository_to_source_path
 add_gems
 
 after_bundle do
+  update_selenium
   set_application_name
   stop_spring
   add_static
