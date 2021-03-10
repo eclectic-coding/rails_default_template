@@ -2,9 +2,10 @@
 
 This is a simple Rails Template to start a new project. It is a template I use to remove those tasks a developer has to perform to set up a new project in Rails:
 
+- Includes **NO** styling as this can change per project
 - Set up RSpec
 - Set up Code Coverage
-- Set up Guard, and Guard live-reloading
+- Set up Guard, and [Guard live-reloading](https://github.com/guard/guard-livereload)
 - Set up Rubocop
 - Add static controller and home page
 - Configure rails generators to not generate helpers or stylesheets
@@ -16,8 +17,9 @@ Clone or fork and clone this repo:
 git clone git@github.com:eclectic-coding/rails_default_template.git
 ```
 **Create a new application:**
+
 There are a few prerequisites:
-- Template is setup to use Postgresql
+- Template is set up to use Postgresql 
 - Since it uses RSpec, you need to use the `-T` to not install testing
 - To use the template you need to use the `-m` switch followed by the path to the `template.rb`
 

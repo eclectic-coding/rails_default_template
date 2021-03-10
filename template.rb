@@ -30,6 +30,7 @@ def add_gems
   gem_group :development do
     gem "fuubar"
     gem "guard"
+    gem 'guard-livereload', '~> 2.5', require: false
     gem "guard-rspec"
     gem "rubocop"
     gem "rubocop-rails", require: false
@@ -81,7 +82,6 @@ add_template_repository_to_source_path
 add_gems
 
 after_bundle do
-  update_selenium
   set_application_name
   stop_spring
   add_static
