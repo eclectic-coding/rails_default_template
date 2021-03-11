@@ -25,6 +25,7 @@ def add_gems
     gem "database_cleaner"
     gem "factory_bot_rails", git: "http://github.com/thoughtbot/factory_bot_rails"
     gem "rspec-rails"
+    gem "standardrb"
   end
 
   gem_group :development do
@@ -32,9 +33,6 @@ def add_gems
     gem "guard"
     gem 'guard-livereload', '~> 2.5', require: false
     gem "guard-rspec"
-    gem "rubocop"
-    gem "rubocop-rails", require: false
-    gem "rubocop-rspec"
   end
 
   gem_group :test do
@@ -59,7 +57,7 @@ def copy_templates
 
   copy_file "Guardfile"
   copy_file ".rspec", force: true
-  copy_file ".rubocop.yml"
+  copy_file ".standard.yml"
   copy_file ".simplecov"
 
   directory "config", force: true
