@@ -22,17 +22,19 @@ end
 
 def add_gems
   gem_group :development, :test do
-    gem "database_cleaner"
-    gem "factory_bot_rails", git: "http://github.com/thoughtbot/factory_bot_rails"
-    gem "rspec-rails"
     gem "standardrb"
+    gem 'rspec-rails'
+    gem 'factory_bot_rails'
+    gem 'capybara'
+    gem 'webdrivers'
+    gem 'faker'
   end
 
   gem_group :development do
     gem "fuubar"
     gem "guard"
+    gem 'guard-rspec'
     gem 'guard-livereload', '~> 2.5', require: false
-    gem "guard-rspec"
   end
 
   gem_group :test do
@@ -53,15 +55,12 @@ def add_static
 end
 
 def copy_templates
-  remove_dir "spec"
-
   copy_file "Guardfile"
   copy_file ".rspec", force: true
   copy_file ".standard.yml"
   copy_file ".simplecov"
 
   directory "config", force: true
-  directory "lib", force: true
   directory "spec", force: true
 end
 
@@ -82,8 +81,8 @@ add_gems
 after_bundle do
   set_application_name
   stop_spring
-  add_static
   copy_templates
+  add_static
   database_setup
 
   say
