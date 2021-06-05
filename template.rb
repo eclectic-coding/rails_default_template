@@ -53,6 +53,22 @@ def set_application_name
   environment "config.application_name = Rails.application.class.module_parent_name"
 end
 
+def config_generators
+  initializer 'generators.rb', <<-CODE
+    Rails.application.config.generators do |g|
+      g.test_framework :rspec,
+        fixtures:         false,
+        view_specs:       false,
+        helper_specs:     false,
+        routing_specs:    false,
+        request_specs:    false,
+        controller_specs: false
+    end
+  CODE
+  inject_into_file "config/application.rb", "    config.generators.helper = false", after: "config.load_defaults 6.1\n"
+  inject_into_file "config/application.rb", "    config.generators.stylesheets = false\n\n", after: "config.generators.helper = false\n"
+end
+
 def add_static
   generate "controller static home"
 
@@ -102,6 +118,7 @@ after_bundle do
   set_application_name
   stop_spring
   copy_templates
+  config_generators
   add_static
   database_setup
   lint_code
