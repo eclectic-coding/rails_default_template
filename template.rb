@@ -21,25 +21,30 @@ def add_template_repository_to_source_path
 end
 
 def add_gems
+  gem 'faker'
+  
   gem_group :development, :test do
-    gem "standardrb"
+    gem "standard", require: false
     gem 'rspec-rails'
-    gem 'factory_bot_rails'
-    gem 'capybara'
-    gem 'webdrivers'
-    gem 'faker'
   end
-
+  
   gem_group :development do
     gem "fuubar"
     gem "guard"
     gem 'guard-rspec'
     gem 'guard-livereload', '~> 2.5', require: false
+    gem "rubocop"
+    gem "rubocop-rails", require: false
+    gem "rubocop-rspec"
   end
-
+  
   gem_group :test do
     gem "rexml" # Added to fix error until selenium-webdriver updated to v.4
     gem "simplecov", require: false
+  end
+
+  gem_group :production do
+    gem "pg" 
   end
 
 end
@@ -57,8 +62,14 @@ end
 def copy_templates
   copy_file "Guardfile"
   copy_file ".rspec", force: true
-  copy_file ".standard.yml"
+  copy_file ".rubocop_rails.yml"
+  copy_file ".rubocop_rspec.yml"
+  copy_file ".rubocop_strict.yml"
+  copy_file ".rubocop_todo.yml"
+  copy_file ".rubocop.yml"
   copy_file ".simplecov"
+  copy_file "renovate.json"
+  copy_file ".gitignore", force: true
 
   directory "config", force: true
   directory "spec", force: true
@@ -73,6 +84,15 @@ def database_setup
   rails_command("db:migrate")
 end
 
+def lint_code
+  run "bundle exec rubocop -a"
+end
+
+def initial_commit
+  run "git init"
+  run "git add . && git commit -m \"Initial_commit\""
+end
+
 # Main setup
 add_template_repository_to_source_path
 
@@ -84,6 +104,8 @@ after_bundle do
   copy_templates
   add_static
   database_setup
+  lint_code
+  initial_commit
 
   say
   say "Rails Article app successfully created!", :blue
