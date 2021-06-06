@@ -25,7 +25,10 @@ def add_gems
   
   gem_group :development, :test do
     gem "standard", require: false
-    gem 'rspec-rails'
+    gem "rspec-rails"
+    gem "factory_bot_rails"
+    gem "capybara"
+    gem "webdrivers"
   end
   
   gem_group :development do
