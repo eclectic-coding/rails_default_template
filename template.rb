@@ -21,8 +21,8 @@ def add_template_repository_to_source_path
 end
 
 def add_gems
-  gem 'faker'
-  
+  gem "faker"
+
   gem_group :development, :test do
     gem "standard", require: false
     gem "rspec-rails"
@@ -30,24 +30,24 @@ def add_gems
     gem "capybara"
     gem "webdrivers"
   end
-  
+
   gem_group :development do
     gem "fuubar"
     gem "guard"
-    gem 'guard-rspec'
-    gem 'guard-livereload', '~> 2.5', require: false
+    gem "guard-rspec"
+    gem "guard-livereload", "~> 2.5", require: false
     gem "rubocop"
     gem "rubocop-rails", require: false
     gem "rubocop-rspec"
   end
-  
+
   gem_group :test do
     gem "rexml" # Added to fix error until selenium-webdriver updated to v.4
     gem "simplecov", require: false
   end
 
   gem_group :production do
-    gem "pg" 
+    gem "pg"
   end
 
 end
@@ -57,7 +57,7 @@ def set_application_name
 end
 
 def config_generators
-  initializer 'generators.rb', <<-CODE
+  initializer "generators.rb", <<-CODE
     Rails.application.config.generators do |g|
       g.test_framework :rspec,
         fixtures:         false,
@@ -90,8 +90,23 @@ def copy_templates
   copy_file "renovate.json"
   copy_file ".gitignore", force: true
 
+  directory "app", force: true
   directory "config", force: true
   directory "spec", force: true
+end
+
+def pack_styles
+  inject_into_file "app/views/layouts/application.html.erb", before: "</head>" do
+    <<-EOF
+      <%= stylesheet_pack_tag 'application', media: 'all', 'data-turbolinks-track': 'reload' %>
+    EOF
+  end
+
+  inject_into_file "app/javascript/packs/application.js", after: "ActiveStorage.start()\n" do
+    <<-EOF
+        import "../stylesheets/application.scss"
+    EOF
+  end
 end
 
 def stop_spring
@@ -122,6 +137,7 @@ after_bundle do
   stop_spring
   copy_templates
   config_generators
+  pack_styles
   add_static
   database_setup
   lint_code
