@@ -79,16 +79,17 @@ def add_static
 end
 
 def copy_templates
-  copy_file "Guardfile"
+  copy_file ".gitignore", force: true
   copy_file ".rspec", force: true
+  copy_file ".rubocop.yml"
   copy_file ".rubocop_rails.yml"
   copy_file ".rubocop_rspec.yml"
   copy_file ".rubocop_strict.yml"
   copy_file ".rubocop_todo.yml"
-  copy_file ".rubocop.yml"
   copy_file ".simplecov"
+  copy_file "Guardfile"
+  copy_file "Procfile"
   copy_file "renovate.json"
-  copy_file ".gitignore", force: true
 
   directory "app", force: true
   directory "config", force: true
