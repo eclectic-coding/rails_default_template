@@ -21,33 +21,33 @@ def add_template_repository_to_source_path
 end
 
 def add_gems
-  gem "faker"
+  gem "faker", "~> 2.18"
 
   gem_group :development, :test do
-    gem "standard", require: false
-    gem "rspec-rails"
-    gem "factory_bot_rails"
+    gem "standard", "~> 1.1", ">= 1.1.2", require: false
+    gem "rspec-rails", "~> 5.0", ">= 5.0.1"
+    gem "factory_bot_rails", "~> 6.2"
     gem "capybara"
     gem "webdrivers"
   end
 
   gem_group :development do
-    gem "fuubar"
-    gem "guard"
-    gem "guard-rspec"
-    gem "guard-livereload", "~> 2.5", require: false
-    gem "rubocop"
-    gem "rubocop-rails", require: false
-    gem "rubocop-rspec"
+    gem "fuubar", "~> 2.5", ">= 2.5.1"
+    gem "guard", "~> 2.17"
+    gem "guard-rspec", "~> 4.7", ">= 4.7.3"
+    gem "guard-livereload", "~> 2.5", ">= 2.5.2", require: false
+    gem "rubocop", "~> 1.17"
+    gem "rubocop-rails", "~> 2.11", ">= 2.11.1", require: false
+    gem "rubocop-rspec", "~> 2.4"
   end
 
   gem_group :test do
-    gem "rexml" # Added to fix error until selenium-webdriver updated to v.4
-    gem "simplecov", require: false
+    gem "rexml", "~> 3.2", ">= 3.2.5" # Added to fix error until selenium-webdriver updated to v.4
+    gem "simplecov", "~> 0.21.2", require: false
   end
 
   gem_group :production do
-    gem "pg"
+    gem "pg", "~> 1.2", ">= 1.2.3"
   end
 
 end
