@@ -22,9 +22,11 @@ end
 
 def add_gems
   gem "faker", "~> 2.18"
+  gem "jsbundling-rails"
+  gem "cssbundling-rails"
 
   gem_group :development, :test do
-    gem "standard", "~> 1.1", ">= 1.1.2", require: false
+    gem "standard", "~> 1.1", ">= 1.1.5", require: false
     gem "rspec-rails", "~> 5.0", ">= 5.0.1"
     gem "factory_bot_rails", "~> 6.2"
     gem "capybara"
@@ -35,9 +37,9 @@ def add_gems
     gem "fuubar", "~> 2.5", ">= 2.5.1"
     gem "guard", "~> 2.17"
     gem "guard-rspec", "~> 4.7", ">= 4.7.3"
-    gem "guard-livereload", "~> 2.5", ">= 2.5.2", require: false
-    gem "rubocop", "~> 1.17"
-    gem "rubocop-rails", "~> 2.11", ">= 2.11.1", require: false
+    gem 'guard-livereload', '~> 2.5', '>= 2.5.2', require: false
+    gem 'rubocop', '~> 1.18'
+    gem "rubocop-rails", "~> 2.11", ">= 2.11.3", require: false
     gem "rubocop-rspec", "~> 2.4"
   end
 
@@ -57,6 +59,7 @@ def set_application_name
 end
 
 def config_generators
+  # Jason Swett: "The Complete Guide to Rails Testing"
   initializer "generators.rb", <<-CODE
     Rails.application.config.generators do |g|
       g.test_framework :rspec,
@@ -94,18 +97,8 @@ def copy_templates
   directory "spec", force: true
 end
 
-def pack_styles
-  inject_into_file "app/views/layouts/application.html.erb", before: "</head>" do
-    <<-EOF
-      <%= stylesheet_pack_tag 'application', media: 'all', 'data-turbolinks-track': 'reload' %>
-    EOF
-  end
-
-  inject_into_file "app/javascript/packs/application.js", after: "ActiveStorage.start()\n" do
-    <<-EOF
-        import "../stylesheets/application.scss"
-    EOF
-  end
+def build_javascript
+  rails_command("javascript:install:esbuild")
 end
 
 def stop_spring
@@ -136,14 +129,17 @@ after_bundle do
   stop_spring
   copy_templates
   config_generators
-  pack_styles
+  # pack_styles
+  build_javascript
   add_static
   database_setup
   lint_code
   initial_commit
 
   say
-  say "Rails Article app successfully created!", :blue
+  say "Rails app successfully created!", :blue
+  say
+  say "To build styles: rails css:install:[tailwind|bootstrap|bulma|postcss|sass]", :yellow
   say
   say "To get started with your new app:", :green
   say "  cd #{app_name}"
