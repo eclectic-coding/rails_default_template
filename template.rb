@@ -27,8 +27,6 @@ def add_gems
 
   gem_group :development, :test do
     gem "standard", "~> 1.1", ">= 1.1.5", require: false
-    gem "rspec-rails", "~> 5.0", ">= 5.0.1"
-    gem "factory_bot_rails", "~> 6.2"
     gem "capybara"
     gem "webdrivers"
   end
@@ -41,11 +39,13 @@ def add_gems
     gem 'rubocop', '~> 1.18'
     gem "rubocop-rails", "~> 2.11", ">= 2.11.3", require: false
     gem "rubocop-rspec", "~> 2.4"
+    gem "factory_bot_rails", "~> 6.2"
   end
 
   gem_group :test do
     gem "rexml", "~> 3.2", ">= 3.2.5" # Added to fix error until selenium-webdriver updated to v.4
     gem "simplecov", "~> 0.21.2", require: false
+    gem "rspec-rails", "~> 5.0", ">= 5.0.1"
   end
 
   gem_group :production do
@@ -65,8 +65,7 @@ def config_generators
       g.test_framework :rspec,
         view_specs:       false,
         helper_specs:     false,
-        routing_specs:    false,
-        controller_specs: false
+        routing_specs:    false
     end
   CODE
   inject_into_file "config/application.rb", "    config.generators.helper = false", after: "config.load_defaults 6.1\n"
