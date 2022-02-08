@@ -1,29 +1,12 @@
 require "fileutils"
 require "shellwords"
 
-def add_template_repository_to_source_path
-  if __FILE__ =~ %r{\Ahttps?://}
-    require "tmpdir"
-    source_paths.unshift(tempdir = Dir.mktmpdir("rails_default_template"))
-    at_exit { FileUtils.remove_entry(tempdir) }
-    git clone: [
-      "--quiet",
-      "https://github.com/eclectic-coding/rails_default_template.git",
-      tempdir
-    ].map(&:shellescape).join(" ")
-
-    if (branch = __FILE__[%r{rails_default_template/(.+)/template.rb}, 1])
-      Dir.chdir(tempdir) { git checkout: branch }
-    end
-  else
-    source_paths.unshift(File.dirname(__FILE__))
-  end
+def add_template_to_source_path
+  source_paths.unshift(File.dirname(__FILE__))
 end
 
 def add_gems
   gem "faker", "~> 2.18"
-  gem "jsbundling-rails"
-  gem "cssbundling-rails"
 
   gem_group :development, :test do
     gem "standard", "~> 1.1", ">= 1.1.5", require: false
@@ -35,15 +18,14 @@ def add_gems
     gem "fuubar", "~> 2.5", ">= 2.5.1"
     gem "guard", "~> 2.17"
     gem "guard-rspec", "~> 4.7", ">= 4.7.3"
-    gem 'guard-livereload', '~> 2.5', '>= 2.5.2', require: false
-    gem 'rubocop', '~> 1.18'
+    gem "guard-livereload", "~> 2.5", ">= 2.5.2", require: false
+    gem "rubocop", "~> 1.18"
     gem "rubocop-rails", "~> 2.11", ">= 2.11.3", require: false
     gem "rubocop-rspec", "~> 2.4"
     gem "factory_bot_rails", "~> 6.2"
   end
 
   gem_group :test do
-    gem "rexml", "~> 3.2", ">= 3.2.5" # Added to fix error until selenium-webdriver updated to v.4
     gem "simplecov", "~> 0.21.2", require: false
     gem "rspec-rails", "~> 5.0", ">= 5.0.1"
   end
@@ -52,10 +34,6 @@ def add_gems
     gem "pg", "~> 1.2", ">= 1.2.3"
   end
 
-end
-
-def set_application_name
-  environment "config.application_name = Rails.application.class.module_parent_name"
 end
 
 def config_generators
@@ -68,7 +46,7 @@ def config_generators
         routing_specs:    false
     end
   CODE
-  inject_into_file "config/application.rb", "    config.generators.helper = false", after: "config.load_defaults 6.1\n"
+  inject_into_file "config/application.rb", "    config.generators.helper = false", after: "config.generators.system_tests = nil\n"
   inject_into_file "config/application.rb", "    config.generators.stylesheets = false\n\n", after: "config.generators.helper = false\n"
 end
 
@@ -96,14 +74,6 @@ def copy_templates
   directory "spec", force: true
 end
 
-def build_javascript
-  rails_command("javascript:install:esbuild")
-end
-
-def stop_spring
-  run "spring stop"
-end
-
 def database_setup
   rails_command("db:create")
   rails_command("db:migrate")
@@ -119,17 +89,13 @@ def initial_commit
 end
 
 # Main setup
-add_template_repository_to_source_path
+add_template_to_source_path
 
 add_gems
 
 after_bundle do
-  set_application_name
-  stop_spring
   copy_templates
   config_generators
-  # pack_styles
-  build_javascript
   add_static
   database_setup
   lint_code
@@ -137,8 +103,6 @@ after_bundle do
 
   say
   say "Rails app successfully created!", :blue
-  say
-  say "To build styles: rails css:install:[tailwind|bootstrap|bulma|postcss|sass]", :yellow
   say
   say "To get started with your new app:", :green
   say "  cd #{app_name}"
