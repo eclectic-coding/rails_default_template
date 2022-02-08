@@ -7,6 +7,7 @@ end
 
 def add_gems
   gem "faker", "~> 2.18"
+  gem "bcrypt"
 
   gem_group :development, :test do
     gem "standard", "~> 1.1", ">= 1.1.5", require: false
@@ -56,6 +57,10 @@ def add_static
   route "root to: 'static#home'"
 end
 
+def user_mailer
+  generate "mailer User confirmation"
+end
+
 def copy_templates
   copy_file ".gitignore", force: true
   copy_file ".rspec", force: true
@@ -71,7 +76,11 @@ def copy_templates
 
   directory "app", force: true
   directory "config", force: true
+  directory "db", force: true
   directory "spec", force: true
+
+  environment "config.action_mailer.default_url_options = { host: 'localhost', port: 3000 }", env: "development"
+  environment "config.action_mailer.default_url_options = { host: 'example.com' }", env: "test"
 end
 
 def database_setup
@@ -94,6 +103,7 @@ add_template_to_source_path
 add_gems
 
 after_bundle do
+  user_mailer
   copy_templates
   config_generators
   add_static
