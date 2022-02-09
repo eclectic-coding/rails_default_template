@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en" class="h-100">
   <head>
     <title>Testapp</title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -10,28 +10,16 @@
     <%= javascript_include_tag "application", "data-turbo-track": "reload", defer: true %>
   </head>
 
-  <body>
-  <body>
-  <header style="width: 1200px; margin: 0 auto;">
-    <% flash.each do |message_type, message| %>
-      <div class="<%= message_type %>"><%= message %></div>
-    <% end %>
-    <ul>
-      <% if user_signed_in? %>
-        <li><%= link_to "My Acount", account_path %></li>
-         <li><%= button_to "Logout", logout_path, method: :delete %></li>
-      <% else %>
-         <li><%= link_to "Login", login_path %></li>
-         <li><%= link_to "Sign Up", sign_up_path %></li>
-         <li><%= link_to "Forgot my password", new_password_path %></li>
-         <li><%= link_to "Didn't receive confirmation instructions", new_confirmation_path %></li>
-      <% end %>
-    </ul>
-    <hr/>
-  </header>
-  <main style="width: 1200px; margin: 0 auto;"> 
-    <%= yield %>
-  </main>
-</body>
+  <body class="d-flex flex-column h-100 bg-body">
+    <main class="flex-shrink-0">
+      <%= render "shared/navbar" %>
+      <%= render "shared/notices" %>
+
+      <div class="container mt-5 mx-auto">
+        <%= yield %>
+      </div>
+    </main>
+
+    <%= render "shared/footer" %>
   </body>
 </html>
