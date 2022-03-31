@@ -1,0 +1,15 @@
+<div class="row pt-4">
+  <div class="col-md-4 offset-md-4 p-4 card shadow-sm">
+    <h2 class="text-center mb-4">Reset Password</h2>
+    <%= form_with url: passwords_path, scope: :user do |form| %>
+      <div class="row g-1 justify-content-center mb-3">
+        <div class="col-auto">
+          <%= form.email_field :email, placeholder: "E-mail address", required: true, class: "form-control" %>
+        </div>
+        <div class="col-auto">
+      <%= form.submit "Reset Password", class: "btn btn-primary" %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>

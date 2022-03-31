@@ -7,6 +7,7 @@ end
 
 def add_gems
   gem "faker", "~> 2.18"
+  gem "bcrypt"
 
   gem_group :development, :test do
     gem "standard", "~> 1.1", ">= 1.1.5", require: false
@@ -71,7 +72,12 @@ def copy_templates
 
   directory "app", force: true
   directory "config", force: true
+  directory "db", force: true
+  directory "lib", force: true
   directory "spec", force: true
+
+  environment "config.action_mailer.default_url_options = { host: 'localhost', port: 3000 }", env: "development"
+  environment "config.action_mailer.default_url_options = { host: 'example.com' }", env: "test"
 end
 
 def database_setup
