@@ -19,7 +19,6 @@ def add_gems
     gem "fuubar", "~> 2.5", ">= 2.5.1"
     gem "guard", "~> 2.17"
     gem "guard-rspec", "~> 4.7", ">= 4.7.3"
-    gem "guard-livereload", "~> 2.5", ">= 2.5.2", require: false
     gem "rubocop", "~> 1.18"
     gem "rubocop-rails", "~> 2.11", ">= 2.11.3", require: false
     gem "rubocop-rspec", "~> 2.4"
@@ -31,9 +30,9 @@ def add_gems
     gem "rspec-rails", "~> 5.0", ">= 5.0.1"
   end
 
-  gem_group :production do
-    gem "pg", "~> 1.2", ">= 1.2.3"
-  end
+  # gem_group :production do
+  #   gem "pg"
+  # end
 
 end
 
