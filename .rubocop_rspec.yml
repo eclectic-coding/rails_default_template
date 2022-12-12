@@ -48,3 +48,6 @@ RSpec/FactoryBot/AttributeDefinedStatically:
 
 RSpec/FactoryBot/CreateList:
   Enabled: true
+
+RSpec/Rails/InferredSpecType:
+  Enabled: false

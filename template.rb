@@ -6,34 +6,44 @@ def add_template_to_source_path
 end
 
 def add_gems
-  gem "faker", "~> 2.18"
   gem "bcrypt"
 
   gem_group :development, :test do
-    gem "standard", "~> 1.1", ">= 1.1.5", require: false
+    gem "standard", "~> 1.9", require: false
     gem "capybara"
     gem "webdrivers"
+    gem "rspec-rails", "~> 6.0.0"
+    gem "factory_bot_rails"
+    gem "faker"
   end
 
   gem_group :development do
     gem "fuubar", "~> 2.5", ">= 2.5.1"
-    gem "guard", "~> 2.17"
-    gem "guard-rspec", "~> 4.7", ">= 4.7.3"
-    gem "rubocop", "~> 1.18"
-    gem "rubocop-rails", "~> 2.11", ">= 2.11.3", require: false
-    gem "rubocop-rspec", "~> 2.4"
-    gem "factory_bot_rails", "~> 6.2"
+    gem "guard"
+    gem "guard-rspec"
+    gem "rubocop"
+    gem "rubocop-rails", require: false
+    gem "rubocop-rspec"
   end
 
   gem_group :test do
     gem "simplecov", "~> 0.21.2", require: false
-    gem "rspec-rails", "~> 5.0", ">= 5.0.1"
   end
 
-  # gem_group :production do
-  #   gem "pg"
-  # end
+end
 
+def add_javascript
+  run "yarn add chokidar -D"
+end
+
+def esbuild_scripts
+  build_script = "node esbuild.config.js"
+
+  if (`npx -v`.to_f < 7.1 rescue "Missing")
+    say %(Add "scripts": { "build": "#{build_script}" } to your package.json), :green
+  else
+    run %(npm set-script build "#{build_script}")
+  end
 end
 
 def config_generators
@@ -65,13 +75,11 @@ def copy_templates
   copy_file ".rubocop_strict.yml"
   copy_file ".rubocop_todo.yml"
   copy_file ".simplecov"
+  copy_file "esbuild.config.js"
   copy_file "Guardfile"
-  copy_file "Procfile"
   copy_file "renovate.json"
 
   directory "app", force: true
-  directory "config", force: true
-  directory "db", force: true
   directory "lib", force: true
   directory "spec", force: true
 
@@ -99,6 +107,8 @@ add_template_to_source_path
 add_gems
 
 after_bundle do
+  add_javascript
+  esbuild_scripts
   copy_templates
   config_generators
   add_static
