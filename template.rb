@@ -6,43 +6,35 @@ def add_template_to_source_path
 end
 
 def add_gems
-  gem "bcrypt"
+  inject_into_file "Gemfile", "gem \"cssbundling-rails\"\n", after: "gem \"jsbundling-rails\"\n"
 
-  gem_group :development, :test do
-    gem "standard", "~> 1.9", require: false
-    gem "capybara"
-    gem "webdrivers"
-    gem "rspec-rails", "~> 6.0.0"
-    gem "factory_bot_rails"
-    gem "faker"
+  append_to_file "Gemfile" do
+    "eval_gemfile 'config/gems/app.rb'\n"
   end
 
-  gem_group :development do
-    gem "fuubar", "~> 2.5", ">= 2.5.1"
-    gem "guard"
-    gem "guard-rspec"
-    gem "rubocop"
-    gem "rubocop-rails", require: false
-    gem "rubocop-rspec"
-  end
-
-  gem_group :test do
-    gem "simplecov", "~> 0.21.2", require: false
-  end
-
+  directory "config", force: true
 end
 
 def add_javascript
   run "yarn add chokidar -D"
 end
 
-def esbuild_scripts
-  build_script = "node esbuild.config.js"
+def add_bootstrap
+  rails_command "css:install:bootstrap"
+end
 
-  if (`npx -v`.to_f < 7.1 rescue "Missing")
-    say %(Add "scripts": { "build": "#{build_script}" } to your package.json), :green
-  else
+def add_esbuild_script
+  build_script = "node esbuild.config.mjs"
+
+  case `npx -v`.to_f
+  when 7.1...8.0
     run %(npm set-script build "#{build_script}")
+    run %(yarn build)
+  when (8.0..)
+    run %(npm pkg set scripts.build="#{build_script}")
+    run %(yarn build)
+  else
+    say %(Add "scripts": { "build": "#{build_script}" } to your package.json), :green
   end
 end
 
@@ -75,7 +67,7 @@ def copy_templates
   copy_file ".rubocop_strict.yml"
   copy_file ".rubocop_todo.yml"
   copy_file ".simplecov"
-  copy_file "esbuild.config.js"
+  copy_file "esbuild.config.mjs"
   copy_file "Guardfile"
   copy_file "renovate.json"
 
@@ -108,9 +100,10 @@ add_gems
 
 after_bundle do
   add_javascript
-  esbuild_scripts
   copy_templates
+  add_esbuild_script
   config_generators
+  add_bootstrap
   add_static
   database_setup
   lint_code
