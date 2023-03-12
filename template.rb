@@ -69,7 +69,7 @@ def copy_templates
   copy_file ".simplecov"
   copy_file "esbuild.config.mjs"
   copy_file "Guardfile"
-  copy_file "renovate.json"
+  copy_file "Procfile.dev"
 
   directory "app", force: true
   directory "lib", force: true
