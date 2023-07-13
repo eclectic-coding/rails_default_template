@@ -1,7 +1,7 @@
 gem "bcrypt"
 
 group :development, :test do
-  gem "standard", "~> 1.9", require: false
+  gem "standard", "~> 1.24", require: false
   gem "capybara"
   gem "webdrivers"
   gem "rspec-rails", "~> 6.0.0"
