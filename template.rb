@@ -69,7 +69,7 @@ def copy_templates
   copy_file ".simplecov"
   copy_file "esbuild.config.mjs"
   copy_file "Guardfile"
-  copy_file "Procfile.dev"
+  copy_file "Procfile.dev", force: true
 
   directory "app", force: true
   directory "lib", force: true
@@ -82,6 +82,11 @@ end
 def database_setup
   rails_command("db:create")
   rails_command("db:migrate")
+end
+
+def add_binstubs
+  run "bundle binstub rspec-core"
+  run "bundle binstub rubocop"
 end
 
 def lint_code
@@ -106,6 +111,7 @@ after_bundle do
   add_bootstrap
   add_static
   database_setup
+  add_binstubs
   lint_code
   initial_commit
 
