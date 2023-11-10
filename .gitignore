@@ -130,4 +130,4 @@ build-iPhoneSimulator/
 # End of https://www.toptal.com/developers/gitignore/api/ruby,rails
 n
 
-#
+config/certs/*

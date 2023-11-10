@@ -56,10 +56,12 @@ def copy_templates
   copy_file ".rubocop_rails.yml"
   copy_file ".rubocop_strict.yml"
   copy_file ".rubocop_todo.yml"
+  copy_file "Brewfile"
   copy_file "esbuild.config.mjs"
   copy_file "Procfile.dev", force: true
 
   directory "app", force: true
+  directory "bin", force: true
   directory "lib", force: true
 
   environment "config.action_mailer.default_url_options = { host: 'localhost', port: 3000 }", env: "development"
@@ -71,6 +73,17 @@ def database_setup
   rails_command("db:system:change --to=postgresql")
   rails_command("db:create")
   rails_command("db:migrate")
+end
+
+def command_available?(command)
+  system("command -v #{command} >/dev/null 2>&1")
+end
+
+def run_setup
+  # Install system dependencies if Homebrew is installed
+  if command_available?("brew")
+    system("brew bundle check --no-lock --no-upgrade") || system!("brew bundle --no-upgrade --no-lock")
+  end
 end
 
 def add_binstubs
@@ -99,6 +112,7 @@ after_bundle do
   config_generators
   add_static
   database_setup
+  run_setup
   add_binstubs
   lint_code
   initial_commit
