@@ -63,6 +63,8 @@ def copy_templates
 end
 
 def database_setup
+  remove_file "config/database.yml"
+  rails_command("db:system:change --to=postgresql")
   rails_command("db:create")
   rails_command("db:migrate")
 end

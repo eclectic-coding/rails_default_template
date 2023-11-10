@@ -11,14 +11,21 @@
   </head>
 
   <body class="d-flex flex-column h-100 bg-body">
-    <main class="flex-shrink-0">
+    <main class="">
       <%= render "shared/navbar" %>
       <%= render "shared/notices" %>
 
       <div class="container mt-5 mx-auto">
         <%= yield %>
       </div>
+
+      <%= content_tag :div, '', class: "container d-flex" do %>
+        <div class="card w-75 shadow-sm p-3">
+          <%= debug(params) if Rails.env.local? %>
+        </div>
+      <% end if Rails.env.local? %>
     </main>
+
 
     <%= render "shared/footer" %>
   </body>
