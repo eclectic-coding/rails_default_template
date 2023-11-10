@@ -6,8 +6,6 @@ def add_template_to_source_path
 end
 
 def add_gems
-  inject_into_file "Gemfile", "gem \"cssbundling-rails\"\n", after: "gem \"jsbundling-rails\"\n"
-
   append_to_file "Gemfile" do
     "eval_gemfile 'config/gems/app.rb'\n"
   end
@@ -20,10 +18,6 @@ def add_javascript
   run "yarn add esbuild-rails"
 
   run "echo | node -v | cut -c 2- > .node-version"
-end
-
-def add_bootstrap
-  rails_command "css:install:bootstrap"
 end
 
 def add_esbuild_script
@@ -96,7 +90,6 @@ after_bundle do
   copy_templates
   add_esbuild_script
   config_generators
-  # add_bootstrap
   add_static
   database_setup
   add_binstubs
