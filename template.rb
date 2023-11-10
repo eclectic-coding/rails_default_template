@@ -17,6 +17,7 @@ end
 
 def add_javascript
   run "yarn add chokidar -D"
+  run "yarn add esbuild-rails"
 
   run "echo | node -v | cut -c 2- > .node-version"
 end
@@ -28,7 +29,16 @@ end
 def add_esbuild_script
   build_script = "node esbuild.config.mjs"
 
-  say %(Add "scripts": { "build": "#{build_script}" } to your package.json), :green
+  case `npx -v`.to_f
+  when 7.1...8.0
+    run %(npm set-script build "#{build_script}")
+    run %(yarn build)
+  when (8.0..)
+    run %(npm pkg set scripts.build="#{build_script}")
+    run %(yarn build)
+  else
+    say %(Add "scripts": { "build": "#{build_script}" } to your package.json), :green
+  end
 end
 
 def config_generators

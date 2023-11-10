@@ -5,6 +5,7 @@ import path from "path"
 import chokidar from "chokidar"
 import http from "http"
 import { setTimeout } from "timers/promises"
+import rails from "esbuild-rails"
 
 const clients = []
 const entryPoints = [
@@ -23,7 +24,7 @@ const config = {
     entryPoints: entryPoints,
     minify: process.env.RAILS_ENV === "production",
     outdir: path.join(process.cwd(), "app/assets/builds"),
-    plugins: [],
+    plugins: [rails()],
     sourcemap: process.env.RAILS_ENV !== "production"
 }
 
@@ -62,7 +63,7 @@ async function buildAndReload() {
             ready = true
         })
         .on("all", async (event, path) => {
-            if (ready === false)  return
+            if (ready === false) return
 
             if (path.includes("javascript")) {
                 try {
@@ -81,7 +82,7 @@ async function buildAndReload() {
 if (process.argv.includes("--reload")) {
     buildAndReload()
 } else if (process.argv.includes("--watch")) {
-    let context = await esbuild.context({...config, logLevel: 'info'})
+    let context = await esbuild.context({ ...config, logLevel: 'info' })
     context.watch()
 } else {
     esbuild.build(config)
