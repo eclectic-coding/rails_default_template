@@ -46,6 +46,10 @@ def add_static
   route "root to: 'static#home'"
 end
 
+def add_bootstrap
+  rails_command "css:install:bootstrap"
+end
+
 def copy_templates
   copy_file ".gitignore", force: true
   copy_file ".rubocop.yml"
@@ -89,6 +93,7 @@ add_gems
 
 after_bundle do
   add_javascript
+  add_bootstrap
   copy_templates
   add_esbuild_script
   config_generators
