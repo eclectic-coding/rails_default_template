@@ -4,19 +4,19 @@ inherit_mode:
   merge:
     - Exclude
 
-require: standard
+require:
+  - standard
 
 inherit_gem:
-  standard: config/ruby-2.7.yml
+  standard: config/ruby-3.2.yml
 
 inherit_from:
   - .rubocop_rails.yml
-  - .rubocop_rspec.yml
   - .rubocop_strict.yml
 
 AllCops:
   NewCops: enable
-  TargetRubyVersion: 3.0.0
+  TargetRubyVersion: 3.2
   Exclude:
     - bin/**/*
     - config/**/*
