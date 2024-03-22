@@ -55,8 +55,6 @@ end
 def copy_templates
   copy_file ".gitignore", force: true
   copy_file ".rubocop.yml"
-  copy_file ".rubocop_rails.yml"
-  copy_file ".rubocop_strict.yml"
   copy_file ".rubocop_todo.yml"
   copy_file "Brewfile"
   copy_file "esbuild.config.mjs"

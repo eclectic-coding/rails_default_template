@@ -7,8 +7,7 @@ group :development, :test do
 end
 
 group :development do
-  gem "rubocop"
-  gem "rubocop-rails", require: false
+  gem "rubocop-rails-omakase", require: false
 end
 
 group :test do
