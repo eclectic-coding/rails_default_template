@@ -6,8 +6,10 @@ def add_template_to_source_path
 end
 
 def add_gems
-  append_to_file "Gemfile" do
-    "eval_gemfile 'config/gems/app.rb'\n"
+  gsub_file "Gemfile", /^ruby ['"].*['"]/, "ruby file: '.ruby-version'"
+
+  inject_into_file "Gemfile", after: "ruby file: '.ruby-version'" do
+    "\neval_gemfile 'config/gems/app.rb'\n\n"
   end
 
   directory "config", force: true
