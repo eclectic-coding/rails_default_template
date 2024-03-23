@@ -22,6 +22,29 @@ def add_javascript
   run "echo | node -v | cut -c 2- > .node-version"
 end
 
+def config_generators
+  inject_into_file "config/application.rb", "    config.generators.helper = false", after: "config.generators.system_tests = nil\n"
+  inject_into_file "config/application.rb", "    config.generators.stylesheets = false\n\n", after: "config.generators.helper = false\n"
+end
+
+def add_static
+  generate "controller static home"
+
+  route "root to: 'static#home'"
+end
+
+def setup_styling
+  response = ask("Would you like to install a style system: bootstrap/tailwind/none system? (b/y/n)")
+
+  return if response == "n"
+
+  if response == "b"
+    add_bootstrap
+  else
+    add_tailwind
+  end
+end
+
 def add_esbuild_script
   build_script = "node esbuild.config.mjs"
 
@@ -37,19 +60,21 @@ def add_esbuild_script
   end
 end
 
-def config_generators
-  inject_into_file "config/application.rb", "    config.generators.helper = false", after: "config.generators.system_tests = nil\n"
-  inject_into_file "config/application.rb", "    config.generators.stylesheets = false\n\n", after: "config.generators.helper = false\n"
-end
-
-def add_static
-  generate "controller static home"
-
-  route "root to: 'static#home'"
-end
-
 def add_bootstrap
   rails_command "css:install:bootstrap"
+  add_esbuild_script
+
+  directory "app_bootstrap", "app", force: true
+  copy_file "esbuild.config.mjs"
+end
+
+def add_tailwind
+  rails_command "css:install:tailwindcss"
+  add_esbuild_script
+
+  # directory "app_tailwind", "app", force: true
+  # TODO: finish tailwind views
+  copy_file "esbuild.config.mjs"
 end
 
 def copy_templates
@@ -57,10 +82,7 @@ def copy_templates
   copy_file ".rubocop.yml"
   copy_file ".rubocop_todo.yml"
   copy_file "Brewfile"
-  copy_file "esbuild.config.mjs"
-  copy_file "Procfile.dev", force: true
 
-  directory "app", force: true
   directory "bin", force: true
   directory "lib", force: true
 
@@ -106,9 +128,8 @@ add_gems
 
 after_bundle do
   add_javascript
-  add_bootstrap
+  setup_styling
   copy_templates
-  add_esbuild_script
   config_generators
   add_static
   database_setup
