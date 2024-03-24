@@ -9,7 +9,7 @@ def add_gems
   gsub_file "Gemfile", /^ruby ['"].*['"]/, "ruby file: '.ruby-version'"
 
   inject_into_file "Gemfile", after: "ruby file: '.ruby-version'" do
-    "\neval_gemfile 'config/gems/app.rb'\n\n"
+    "\n\neval_gemfile 'config/gems/app.rb'\n"
   end
 
   directory "config", force: true
@@ -62,10 +62,10 @@ end
 
 def add_bootstrap
   rails_command "css:install:bootstrap"
-  add_esbuild_script
-
   directory "app_bootstrap", "app", force: true
   copy_file "esbuild.config.mjs"
+
+  add_esbuild_script
 end
 
 def add_tailwind
@@ -88,6 +88,18 @@ def copy_templates
 
   environment "config.action_mailer.default_url_options = { host: 'localhost', port: 3000 }", env: "development"
   environment "config.action_mailer.default_url_options = { host: 'example.com' }", env: "test"
+end
+
+def setup_rspec
+  return unless options[:skip_test]
+
+  copy_file "rspec_gemfile.rb", "config/gems/testing.rb"
+
+  inject_into_file "Gemfile", after: "eval_gemfile 'config/gems/app.rb'" do
+    "\n\neval_gemfile 'config/gems/testing.rb'\n"
+  end
+
+  run "bundle install"
 end
 
 def database_setup
@@ -113,7 +125,7 @@ def add_binstubs
 end
 
 def lint_code
-  run "bundle exec rubocop -a"
+  # run "bundle exec rubocop -a"
 end
 
 def initial_commit
@@ -130,6 +142,7 @@ after_bundle do
   add_javascript
   setup_styling
   copy_templates
+  setup_rspec
   config_generators
   add_static
   database_setup
