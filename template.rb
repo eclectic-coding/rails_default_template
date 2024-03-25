@@ -9,7 +9,13 @@ def add_gems
   gsub_file "Gemfile", /^ruby ['"].*['"]/, "ruby file: '.ruby-version'"
 
   inject_into_file "Gemfile", after: "ruby file: '.ruby-version'" do
-    "\n\neval_gemfile 'config/gems/app.rb'\n"
+    "\neval_gemfile 'config/gems/app.rb'"
+  end
+
+  if options[:skip_test]
+    inject_into_file "Gemfile", after: "eval_gemfile 'config/gems/app.rb'" do
+      "\neval_gemfile 'config/gems/rspec_gemfile.rb'"
+    end
   end
 
   directory "config", force: true
@@ -37,6 +43,8 @@ def setup_styling
   response = ask("Would you like to install a style system: bootstrap/tailwind/none system? (b/y/n)")
 
   return if response == "n"
+
+  add_javascript
 
   if response == "b"
     add_bootstrap
@@ -93,13 +101,8 @@ end
 def setup_rspec
   return unless options[:skip_test]
 
-  copy_file "rspec_gemfile.rb", "config/gems/testing.rb"
-
-  inject_into_file "Gemfile", after: "eval_gemfile 'config/gems/app.rb'" do
-    "\n\neval_gemfile 'config/gems/testing.rb'\n"
-  end
-
-  run "bundle install"
+  copy_file ".rspec"
+  directory "spec", force: true
 end
 
 def database_setup
@@ -122,10 +125,11 @@ end
 
 def add_binstubs
   run "bundle binstub rubocop"
+  run "bundle binstub rspec-core" if options[:skip_test]
 end
 
 def lint_code
-  # run "bundle exec rubocop -a"
+  run "bundle exec rubocop -a"
 end
 
 def initial_commit
@@ -139,7 +143,6 @@ add_template_to_source_path
 add_gems
 
 after_bundle do
-  add_javascript
   setup_styling
   copy_templates
   setup_rspec
