@@ -21,13 +21,6 @@ def add_gems
   directory "config", force: true
 end
 
-def add_javascript
-  run "yarn add chokidar -D"
-  run "yarn add esbuild-rails"
-
-  run "echo | node -v | cut -c 2- > .node-version"
-end
-
 def config_generators
   inject_into_file "config/application.rb", "    config.generators.helper = false", after: "config.generators.system_tests = nil\n"
   inject_into_file "config/application.rb", "    config.generators.stylesheets = false\n\n", after: "config.generators.helper = false\n"
@@ -51,6 +44,13 @@ def setup_styling
   else
     add_tailwind
   end
+end
+
+def add_javascript
+  run "yarn add chokidar -D"
+  run "yarn add esbuild-rails"
+
+  run "echo | node -v | cut -c 2- > .node-version"
 end
 
 def add_esbuild_script
