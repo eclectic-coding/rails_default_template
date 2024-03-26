@@ -101,6 +101,8 @@ end
 def setup_rspec
   return unless options[:skip_test]
 
+  gsub_file "bin/ci", "bin/rails test", "bin/rspec"
+
   copy_file ".rspec"
   directory "spec", force: true
 end
@@ -145,9 +147,9 @@ add_gems
 after_bundle do
   setup_styling
   copy_templates
-  setup_rspec
   config_generators
   add_static
+  setup_rspec
   database_setup
   run_setup
   add_binstubs

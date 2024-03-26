@@ -21,12 +21,7 @@ git clone git@github.com:eclectic-coding/rails_default_template.git
 ```
 **Create a new application:**
 
-There are a few prerequisites:
-- Template is set up to use Postgresql 
-- Since it uses RSpec, you need to use the `-T` to not install testing
-- To use the template you need to use the `-m` switch followed by the path to the `template.rb`
-
-By defaults `rails new` looks in your root directory for a `.railrc` configuration file. Here you can place these commands, so you do not have to remember them each time. In your root home directory create `.railsrc`, and add the following:
+There are a few prerequisites. By defaults `rails new` looks in your root directory for a `.railrc` configuration file. Here you can place these commands, so you do not have to remember them each time. In your root home directory create `.railsrc`, and add the following:
 ```shell
 --skip-spring
 -a propshaft
@@ -35,4 +30,4 @@ By defaults `rails new` looks in your root directory for a `.railrc` configurati
 ```
 Create new app: `rails new awesome_app -T` if you wish to add rspec
 
-Bypass these settings for a default rails app: `rails new awesome_app --no-rc`
+Bypass these settings and this template for a default rails app: `rails new awesome_app --no-rc`
