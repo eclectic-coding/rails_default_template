@@ -8,7 +8,7 @@ group :development do
 end
 
 group :test do
-  gem "capybara"
-  gem "vcr"
   gem "webmock"
+  gem "simplecov", "~> 0.21.2", require: false
+  gem "test-prof"
 end

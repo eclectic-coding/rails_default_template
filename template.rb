@@ -6,10 +6,8 @@ def add_template_to_source_path
 end
 
 def add_gems
-  gsub_file "Gemfile", /^ruby ['"].*['"]/, "ruby file: '.ruby-version'"
-
-  inject_into_file "Gemfile", after: "ruby file: '.ruby-version'" do
-    "\neval_gemfile 'config/gems/app.rb'"
+  inject_into_file "Gemfile", after: "source \"https://rubygems.org\"" do
+    "\n\neval_gemfile 'config/gems/app.rb'"
   end
 
   if options[:skip_test]
@@ -54,6 +52,7 @@ def add_javascript
 end
 
 def add_esbuild_script
+  copy_file "esbuild.config.mjs"
   build_script = "node esbuild.config.mjs"
 
   case `npx -v`.to_f
@@ -70,14 +69,15 @@ end
 
 def add_bootstrap
   rails_command "css:install:bootstrap"
+  add_esbuild_script
+
   directory "app_bootstrap", "app", force: true
-  copy_file "esbuild.config.mjs"
 
   add_esbuild_script
 end
 
 def add_tailwind
-  rails_command "css:install:tailwindcss"
+  rails_command "css:install:tailwind"
   add_esbuild_script
 
   # directory "app_tailwind", "app", force: true
@@ -87,8 +87,8 @@ end
 
 def copy_templates
   copy_file ".gitignore", force: true
-  copy_file ".rubocop.yml"
-  copy_file ".rubocop_todo.yml"
+  copy_file ".rubocop.yml", force: true
+  copy_file ".rubocop_todo.yml", force: true
   copy_file "Brewfile"
 
   directory "bin", force: true
