@@ -46,9 +46,14 @@ end
 
 def add_javascript
   run "yarn add chokidar -D"
-  run "yarn add esbuild-rails"
 
   run "echo | node -v | cut -c 2- > .node-version"
+
+  directory "app", force: true
+
+  insert_into_file "app/javascript/application.js", after: "import \"./controllers\"\n" do
+    "\nimport \"./controllers/third_party_controllers\"\n"
+  end
 end
 
 def add_esbuild_script

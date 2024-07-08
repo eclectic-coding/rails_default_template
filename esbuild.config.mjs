@@ -5,7 +5,6 @@ import path from "path"
 import chokidar from "chokidar"
 import http from "http"
 import { setTimeout } from "timers/promises"
-import rails from "esbuild-rails"
 
 const clients = []
 const entryPoints = [
@@ -24,7 +23,7 @@ const config = {
     entryPoints: entryPoints,
     minify: process.env.RAILS_ENV === "production",
     outdir: path.join(process.cwd(), "app/assets/builds"),
-    plugins: [rails()],
+    plugins: [],
     sourcemap: process.env.RAILS_ENV !== "production"
 }
 

@@ -4,18 +4,19 @@ This is a simple Rails Template to start a new project. It is a template I use t
 
 ## Features
 - Defaults to Esbuild for JavaScript bundling
-- Asks the user for a choice of styling systems. Right now between Bootstrap or none, adding Tailwind soon 
+- Asks the user for a choice of styling systems. Right now between Bootstrap or none, adding Tailwind soon
 - Defaults to `minitest` but if the user uses `-T` with `rails new` it will set up RSpec
-  - Includes FactoryBot, Faker, Webmock, and VCR preconfigured
+  - Includes FactoryBot, Faker, and Webmock preconfigured
   - Set up Code Coverage with `simplecov`
 - Set up Rubocop using `rubocop-rails-omakase`
 - Adds code quality and security tools that can be used with `bin/ci`
 - Add static controller and home page
 - Configure rails generators to not generate helpers or stylesheets
 - Create postgresql database and `db:migrate`
+- Local development SSL. To enable, edit `Procfile.dev`: `web: env RUBY_DEBUG_OPEN=true bin/bundle exec puma -C config/puma.rb`
 
 ## Start using
-Clone or fork and clone this repo: 
+Clone or fork and clone this repo:
 ```shell
 git clone git@github.com:eclectic-coding/rails_default_template.git
 ```
