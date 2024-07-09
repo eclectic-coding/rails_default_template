@@ -16,7 +16,7 @@ def add_gems
     end
   end
 
-  directory "config", force: true
+  directory "config/gems", force: true
 end
 
 def config_generators
@@ -31,7 +31,7 @@ def add_static
 end
 
 def setup_styling
-  response = ask("Would you like to install a style system: bootstrap/tailwind/sass system? (b/t/s)")
+  response = ask("Would you like to install a style system: bootstrap/tailwind/postcss/sass system? (b/t/p/s)", :green)
 
   add_javascript
 
@@ -39,6 +39,8 @@ def setup_styling
     add_bootstrap
   elsif response == "t"
     add_tailwind
+  elsif response == "p"
+    add_postcss
   else
     add_sass
   end
@@ -90,10 +92,18 @@ def add_tailwind
   # TODO: finish tailwind views
 end
 
+def add_postcss
+  rails_command "css:install:postcss"
+
+  directory "app_postcss", "app", force: true
+  add_esbuild_script
+end
+
 def add_sass
   rails_command "css:install:sass"
 
   directory "app_sass", "app", force: true
+  add_esbuild_script
 end
 
 def copy_templates
@@ -138,6 +148,30 @@ def run_setup
   end
 end
 
+def local_ssl
+  response = ask("Would you like to configure SSL for local development: (y/n)", :green)
+
+  return unless response == "y"
+
+  run "mkdir config/certs"
+  run "mkcert -cert-file config/certs/localhost.crt -key-file config/certs/localhost.key localhost"
+
+  inject_into_file "config/puma.rb", after: "worker_timeout 3600" do
+    <<~RUBY
+        \n
+        ssl_bind(
+        "0.0.0.0",
+        3001,
+        key: ENV.fetch("SSL_KEY_FILE", "config/certs/localhost.key"),
+        cert: ENV.fetch("SSL_CERT_FILE", "config/certs/localhost.crt"),
+        verify_mode: "none"
+      )
+    RUBY
+  end
+
+  gsub_file "Procfile.dev", "bin/rails server", "bin/bundle exec puma -C config/puma.rb"
+end
+
 def add_binstubs
   run "bundle binstub rubocop"
   run "bundle binstub rspec-core" if options[:skip_test]
@@ -165,6 +199,7 @@ after_bundle do
   setup_rspec
   database_setup
   run_setup
+  local_ssl
   add_binstubs
   lint_code
   initial_commit
