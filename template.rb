@@ -31,16 +31,16 @@ def add_static
 end
 
 def setup_styling
-  response = ask("Would you like to install a style system: bootstrap/tailwind/none system? (b/y/n)")
-
-  return if response == "n"
+  response = ask("Would you like to install a style system: bootstrap/tailwind/sass system? (b/t/s)")
 
   add_javascript
 
   if response == "b"
     add_bootstrap
-  else
+  elsif response == "t"
     add_tailwind
+  else
+    add_sass
   end
 end
 
@@ -85,13 +85,21 @@ def add_tailwind
   rails_command "css:install:tailwind"
   add_esbuild_script
 
+  # add flowbite
   # directory "app_tailwind", "app", force: true
   # TODO: finish tailwind views
-  copy_file "esbuild.config.mjs"
+end
+
+def add_sass
+  rails_command "css:install:sass"
+
+  directory "app_sass", "app", force: true
 end
 
 def copy_templates
+  copy_file ".editorconfig", force: true
   copy_file ".gitignore", force: true
+  copy_file "esbuild.config.mjs", force: true
   copy_file ".rubocop.yml", force: true
   copy_file ".rubocop_todo.yml", force: true
   copy_file "Brewfile"
