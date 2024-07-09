@@ -13,7 +13,7 @@ This is a simple Rails Template to start a new project. It is a template I use t
 - Add static controller and home page
 - Configure rails generators to not generate helpers or stylesheets
 - Create postgresql database and `db:migrate`
-- Local development SSL. To enable, edit `Procfile.dev`: `web: env RUBY_DEBUG_OPEN=true bin/bundle exec puma -C config/puma.rb`
+- You can enable local development SSL: Defaults to `https://localhost:3001` or without SSL at `http://localhost:3000`
 
 ## Start using
 Clone or fork and clone this repo:
