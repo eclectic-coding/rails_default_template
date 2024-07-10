@@ -123,6 +123,7 @@ end
 
 def copy_templates
   copy_file ".editorconfig", force: true
+  copy_file ".erb-lint.yml", force: true
   copy_file ".gitignore", force: true
   copy_file "esbuild.config.mjs", force: true
   copy_file ".rubocop.yml", force: true
@@ -144,7 +145,17 @@ def setup_testing
     copy_file ".rspec"
     directory "spec", force: true
   else
-    copy_file "test/test_helper.rb"
+    copy_file "test/test_helper.rb", force: true
+  end
+end
+
+def config_gems
+  rails_command "generate annotate:install"
+
+  inject_into_file "config/routes.rb", after: "Rails.application.routes.draw do\n" do
+    <<-RUBY
+  mount LetterOpenerWeb::Engine, at: "/letter_opener" if Rails.env.development?\n
+    RUBY
   end
 end
 
@@ -195,6 +206,8 @@ end
 
 def lint_code
   run "bundle exec rubocop -a"
+
+  run "bundle exec erb-lint --lint-all -a"
 end
 
 def initial_commit
@@ -215,6 +228,7 @@ after_bundle do
   config_generators
   add_static
   setup_testing
+  config_gems
   database_setup
   run_setup
   local_ssl
