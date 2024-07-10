@@ -5,18 +5,31 @@ def add_template_to_source_path
   source_paths.unshift(File.dirname(__FILE__))
 end
 
+def user_responses
+  @testing_response = ask("Would you like to install RSpec for testing: (y/n)", :green) if options[:skip_test]
+  @styling_response = ask("Would you like to install a style system: bootstrap/tailwind/postcss/sass system? (b/t/p/s)", :green)
+  @ssl_response = ask("Would you like to configure SSL for local development: (y/n)", :green)
+end
+
 def add_gems
+  run "mkdir config/gems"
+
+  copy_file "config/gems/app.rb", "config/gems/app.rb", force: true
   inject_into_file "Gemfile", after: "source \"https://rubygems.org\"" do
     "\n\neval_gemfile 'config/gems/app.rb'"
   end
 
-  if options[:skip_test]
+  if @testing_response == "y"
+    copy_file "config/gems/rspec_gemfile.rb", "config/gems/rspec_gemfile.rb", force: true
     inject_into_file "Gemfile", after: "eval_gemfile 'config/gems/app.rb'" do
       "\neval_gemfile 'config/gems/rspec_gemfile.rb'"
     end
+  elsif @testing_response.nil?
+    copy_file "config/gems/minitest_gemfile.rb", "config/gems/minitest_gemfile.rb", force: true
+    inject_into_file "Gemfile", after: "eval_gemfile 'config/gems/app.rb'" do
+      "\neval_gemfile 'config/gems/minitest_gemfile.rb'"
+    end
   end
-
-  directory "config/gems", force: true
 end
 
 def config_generators
@@ -31,15 +44,13 @@ def add_static
 end
 
 def setup_styling
-  response = ask("Would you like to install a style system: bootstrap/tailwind/postcss/sass system? (b/t/p/s)", :green)
-
   add_javascript
 
-  if response == "b"
+  if @styling_response == "b"
     add_bootstrap
-  elsif response == "t"
+  elsif @styling_response == "t"
     add_tailwind
-  elsif response == "p"
+  elsif @styling_response == "p"
     add_postcss
   else
     add_sass
@@ -125,13 +136,16 @@ def copy_templates
   environment "config.action_mailer.default_url_options = { host: 'example.com' }", env: "test"
 end
 
-def setup_rspec
-  return unless options[:skip_test]
+def setup_testing
+  if @testing_response == "y"
 
-  gsub_file "bin/ci", "bin/rails test", "bin/rspec"
+    gsub_file "bin/ci", "bin/rails test", "bin/rspec"
 
-  copy_file ".rspec"
-  directory "spec", force: true
+    copy_file ".rspec"
+    directory "spec", force: true
+  else
+    copy_file "test/test_helper.rb"
+  end
 end
 
 def database_setup
@@ -153,9 +167,7 @@ def run_setup
 end
 
 def local_ssl
-  response = ask("Would you like to configure SSL for local development: (y/n)", :green)
-
-  return unless response == "y"
+  return unless @ssl_response == "y"
 
   run "mkdir config/certs"
   run "mkcert -cert-file config/certs/localhost.crt -key-file config/certs/localhost.key localhost"
@@ -178,7 +190,7 @@ end
 
 def add_binstubs
   run "bundle binstub rubocop"
-  run "bundle binstub rspec-core" if options[:skip_test]
+  run "bundle binstub rspec-core" if @testing_response == "y"
 end
 
 def lint_code
@@ -193,6 +205,8 @@ end
 # Main setup
 add_template_to_source_path
 
+user_responses
+
 add_gems
 
 after_bundle do
@@ -200,7 +214,7 @@ after_bundle do
   copy_templates
   config_generators
   add_static
-  setup_rspec
+  setup_testing
   database_setup
   run_setup
   local_ssl

@@ -5,8 +5,8 @@ This is a simple Rails Template to start a new project. It is a template I use t
 ## Features
 - Defaults to Esbuild for JavaScript bundling
 - Asks the user for a choice of styling systems. Right now between Bootstrap or none, adding Tailwind soon
-- Defaults to `minitest` but if the user uses `-T` with `rails new` it will set up RSpec
-  - Includes preconfigure FactoryBot, Faker, and Webmock
+- Defaults to `minitest` but if the user uses `-T` with `rails new` it will set up RSpec, or now tests at all
+  - Includes preconfigure FactoryBot (RSPEC), Faker, and Webmock
   - Set up Code Coverage with `simplecov`
 - Set up Rubocop using `rubocop-rails-omakase`
 - Adds code quality and security tools that can be used with `bin/ci`
