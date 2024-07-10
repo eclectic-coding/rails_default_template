@@ -85,11 +85,15 @@ end
 
 def add_tailwind
   rails_command "css:install:tailwind"
-  add_esbuild_script
 
-  # add flowbite
-  # directory "app_tailwind", "app", force: true
-  # TODO: finish tailwind views
+  run "yarn add flowbite postcss-import postcss-nested"
+
+  directory "app_tailwind", "app", force: true
+  copy_file "tailwind.config.js", "tailwind.config.js", force: true
+  copy_file "tailwind_postcss.config.js", "postcss.config.js", force: true
+  gsub_file "package.json", "tailwindcss -i ./app/assets/stylesheets/application.tailwind.css -o ./app/assets/builds/application.css --minify", "tailwindcss --postcss -i ./app/assets/stylesheets/application.tailwind.css -o ./app/assets/builds/application.css --minify"
+
+  add_esbuild_script
 end
 
 def add_postcss
