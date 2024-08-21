@@ -124,6 +124,7 @@ end
 def copy_templates
   copy_file ".editorconfig", force: true
   copy_file ".erb-lint.yml", force: true
+  copy_file ".erdconfig", force: true
   copy_file ".gitignore", force: true
   copy_file "esbuild.config.mjs", force: true
   copy_file ".rubocop.yml", force: true
@@ -131,6 +132,7 @@ def copy_templates
   copy_file "Brewfile"
 
   directory "bin", force: true
+  directory "docs", force: true
   directory "lib", force: true
 
   environment "config.action_mailer.default_url_options = { host: 'localhost', port: 3000 }", env: "development"
@@ -207,7 +209,7 @@ end
 def lint_code
   run "bundle exec rubocop -a"
 
-  run "bundle exec erb-lint --lint-all -a"
+  run "bundle exec erblint --lint-all -a"
 end
 
 def initial_commit

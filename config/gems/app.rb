@@ -13,4 +13,5 @@ group :development do
   gem "bundle-audit", require: false
   # gem "bullet" # Uncomment if you want to use Bullet (doesn't support Rails 7.2 beta yet)
   gem "letter_opener_web"
+  gem "rails-erd"
 end
