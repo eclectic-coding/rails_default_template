@@ -6,9 +6,12 @@ def add_template_to_source_path
 end
 
 def user_responses
-  @testing_response = ask("Would you like to install RSpec for testing: (y/n)", :green) if options[:skip_test]
-  @styling_response = ask("Would you like to install a style system: bootstrap/tailwind/postcss/sass system? (b/t/p/s)", :green)
-  @ssl_response = ask("Would you like to configure SSL for local development: (y/n)", :green)
+  @testing_response = ask("Would you like to install RSpec for testing: (Y/n)", :green) if options[:skip_test]
+  @testing_response = "y" if @testing_response.blank?
+  @styling_response = ask("Would you like to install a style system: bootstrap/tailwind/postcss/sass system? (B/t/p/s)", :green)
+  @styling_response = "b" if @styling_response.blank?
+  @ssl_response = ask("Would you like to configure SSL for local development: (Y/n)", :green)
+  @ssl_response = "y" if @ssl_response.blank?
 end
 
 def add_gems
@@ -164,8 +167,6 @@ def config_gems
 end
 
 def database_setup
-  # remove_file "config/database.yml"
-  # rails_command("db:system:change --to=postgresql")
   rails_command("db:create")
   rails_command("db:migrate")
 end
