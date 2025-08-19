@@ -30,6 +30,8 @@ def add_gems
       "\neval_gemfile 'config/gems/minitest_gemfile.rb'"
     end
   end
+
+  system("ruby -v | awk '{print $2}' > .ruby-version")
 end
 
 def config_generators
