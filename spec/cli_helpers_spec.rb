@@ -3,24 +3,8 @@
 require 'rspec'
 require 'shellwords'
 
-# Load the cli helper methods from template.rb by extracting their definitions and eval'ing them.
-TEMPLATE = File.read(File.expand_path('../template.rb', __dir__))
-
-helpers = []
-if (m = TEMPLATE.match(/(def\s+cli_option[\s\S]*?^end\s*)/m))
-  helpers << m[1]
-else
-  raise 'Could not find cli_option method in template.rb'
-end
-
-if (m = TEMPLATE.match(/(def\s+cli_flag\?[\s\S]*?^end\s*)/m))
-  helpers << m[1]
-else
-  raise 'Could not find cli_flag? method in template.rb'
-end
-
-# Eval the helper methods at top-level so they behave like in template context
-helpers.each { |code| eval(code) }
+# Load the cli helper methods directly from the extracted helper file
+require_relative '../template_cli_helpers'
 
 RSpec.describe 'cli helpers' do
   after(:each) do
