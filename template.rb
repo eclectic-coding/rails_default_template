@@ -5,6 +5,109 @@ def add_template_to_source_path
   source_paths.unshift(File.dirname(__FILE__))
 end
 
+# CLI helpers: read values and flags from the Rails template `options` hash or from raw ARGV.
+# - cli_option(name, default) => returns the option value (from options or ARGV --name=value or --name value) or default
+# - cli_flag?(name) => returns true if the flag was passed (either in options or as --name in ARGV)
+def cli_option(name, default = nil)
+  # Normalize names with hyphens to underscore keys for the options hash
+  name_str = name.to_s
+  key_str = name_str.tr('-', '_')
+  key_sym = key_str.to_sym
+
+  # prefer test harness global if present
+  opts = defined?($TEMPLATE_OPTIONS) ? $TEMPLATE_OPTIONS : nil
+
+  # try to obtain an options object if available (handles cases where options is a method)
+  if opts.nil?
+    begin
+      opts = options
+    rescue NameError, NoMethodError
+      opts = nil
+    end
+  end
+
+  # prefer the `options` hash provided by Rails templates when present
+  if opts
+    opts_hash = nil
+    begin
+      opts_hash = opts.to_hash
+    rescue NoMethodError, TypeError
+      opts_hash = nil
+    end
+
+    if opts_hash
+      if opts_hash.key?(key_sym)
+        return opts_hash[key_sym]
+      elsif opts_hash.key?(key_str)
+        return opts_hash[key_str]
+      elsif opts_hash.key?(name_str)
+        return opts_hash[name_str]
+      end
+    end
+  end
+
+  # helper to remove surrounding quotes from a value
+  unquote = ->(v) { v.nil? ? v : v.to_s.gsub(/^['"]|['"]$/, '') }
+
+  # parse ARGV: --name=value
+  if (arg = ARGV.find { |a| a.start_with?("--#{name_str}=") })
+    return unquote.call(arg.split("=", 2)[1])
+  end
+
+  # parse ARGV: --name value
+  idx = ARGV.index("--#{name_str}")
+  if idx && ARGV[idx + 1] && !ARGV[idx + 1].start_with?("--")
+    return unquote.call(ARGV[idx + 1])
+  end
+
+  default
+end
+
+def cli_flag?(name)
+  name_str = name.to_s
+  key_str = name_str.tr('-', '_')
+  key_sym = key_str.to_sym
+
+  # prefer test harness global if present
+  opts = defined?($TEMPLATE_OPTIONS) ? $TEMPLATE_OPTIONS : nil
+
+  # try to obtain an options object if available (handles cases where options is a method)
+  if opts.nil?
+    begin
+      opts = options
+    rescue NameError, NoMethodError
+      opts = nil
+    end
+  end
+
+  if opts
+    opts_hash = nil
+    begin
+      opts_hash = opts.to_hash
+    rescue NoMethodError, TypeError
+      opts_hash = nil
+    end
+
+    if opts_hash
+      if opts_hash.key?(key_sym)
+        return !!opts_hash[key_sym]
+      elsif opts_hash.key?(key_str)
+        return !!opts_hash[key_str]
+      elsif opts_hash.key?(name_str)
+        return !!opts_hash[name_str]
+      end
+    end
+  end
+
+  # if explicitly provided as --flag=value, interpret common boolean forms
+  if (arg = ARGV.find { |a| a.start_with?("--#{name_str}=") })
+    val = arg.split("=", 2)[1].to_s.gsub(/^['"]|['"]$/, '')
+    return !(val =~ /\A(false|0)\z/i)
+  end
+
+  ARGV.any? { |a| a == "--#{name_str}" || a.start_with?("--#{name_str}=") }
+end
+
 def user_responses
   say "options: #{options.inspect}"   # useful for exploring what's present
   say "ARGV: #{ARGV.inspect}"         # raw CLI tokens
@@ -21,6 +124,17 @@ def add_gems
   run "mkdir config/gems"
 
   copy_file "config/gems/app.rb", "config/gems/app.rb", force: true
+
+  # If the user selected a JavaScript option other than importmap, enable cssbundling-rails
+  # by uncommenting the gem in the copied config/gems/app.rb
+  js_choice = cli_option(:javascript, options && options[:javascript])
+  js_choice = js_choice.to_s if js_choice
+  js_choice = "importmap" if js_choice.nil? || js_choice == ""
+
+  if js_choice != "importmap"
+    gsub_file "config/gems/app.rb", /#\s*gem\s+['"]cssbundling-rails['"]/, 'gem "cssbundling-rails"'
+  end
+
   inject_into_file "Gemfile", after: "source \"https://rubygems.org\"" do
     "\n\neval_gemfile 'config/gems/app.rb'"
   end
@@ -221,6 +335,13 @@ end
 def initial_commit
   run "git init"
   run "git add . && git commit -m \"Initial_commit\""
+end
+
+# Add support for test harness: if $TEMPLATE_OPTIONS is set, prefer it as the options source
+if defined?($TEMPLATE_OPTIONS)
+  def options
+    $TEMPLATE_OPTIONS
+  end
 end
 
 # Main setup
