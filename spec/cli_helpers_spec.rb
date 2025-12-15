@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'rspec'
+require 'shellwords'
 
 # Load the cli helper methods from template.rb by extracting their definitions and eval'ing them.
 TEMPLATE = File.read(File.expand_path('../template.rb', __dir__))
@@ -126,5 +127,25 @@ RSpec.describe 'cli helpers' do
 
     ARGV.replace(["--javascript=es build"]) # simulate a single ARGV element that includes a space
     expect(cli_option(:javascript, 'importmap')).to eq('es build')
+  end
+
+  # .railsrc simulation tests
+  it 'reads flags from a .railsrc-like string (simple flags)' do
+    railsrc = "--javascript=esbuild --skip-test"
+    tokens = Shellwords.shellsplit(railsrc)
+    ARGV.replace(tokens)
+
+    expect(cli_option(:javascript, 'importmap')).to eq('esbuild')
+    expect(cli_flag?('skip-test')).to be true
+  end
+
+  it 'reads flags from a .railsrc-like string with quoted values and spaces' do
+    railsrc = "--javascript='es build' --other=\"complex value\" --skip-test=false"
+    tokens = Shellwords.shellsplit(railsrc)
+    ARGV.replace(tokens)
+
+    expect(cli_option(:javascript, 'importmap')).to eq('es build')
+    expect(cli_option(:other, nil)).to eq('complex value')
+    expect(cli_flag?('skip-test')).to be false
   end
 end
