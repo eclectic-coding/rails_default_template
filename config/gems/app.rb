@@ -1,4 +1,6 @@
 gem "annotate"
+gem "bootstrap", "~> 5.3.3"
+gem "dartsass-rails"
 # gem "cssbundling-rails"
 gem "inline_svg"
 gem "name_of_person"

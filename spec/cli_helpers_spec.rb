@@ -33,8 +33,8 @@ RSpec.describe 'cli helpers' do
     it "parses ARGV correctly for #{name}" do
       ARGV.replace(args)
 
-      js = cli_option(:javascript, 'importmap')
-      skip_test_flag = cli_flag?('skip-test')
+      js = TemplateCLI.cli_option(:javascript, 'importmap')
+      skip_test_flag = TemplateCLI.cli_flag?('skip-test')
 
       case name
       when 'no args'
@@ -52,7 +52,7 @@ RSpec.describe 'cli helpers' do
       when '--javascript empty value'
         expect(js).to eq('')
       when 'other flag with value'
-        expect(cli_option(:other, nil)).to eq('foo')
+        expect(TemplateCLI.cli_option(:other, nil)).to eq('foo')
       end
     end
   end
@@ -63,8 +63,8 @@ RSpec.describe 'cli helpers' do
 
     ARGV.replace(['--javascript=importmap'])
 
-    expect(cli_option(:javascript, 'importmap')).to eq('esbuild')
-    expect(cli_flag?('skip-test')).to be true
+    expect(TemplateCLI.cli_option(:javascript, 'importmap')).to eq('esbuild')
+    expect(TemplateCLI.cli_flag?('skip-test')).to be true
   end
 
   it 'prefers options hash over ARGV when options present (string key)' do
@@ -72,45 +72,45 @@ RSpec.describe 'cli helpers' do
 
     ARGV.replace(['--javascript=importmap'])
 
-    expect(cli_option(:javascript, 'importmap')).to eq('esbuild')
+    expect(TemplateCLI.cli_option(:javascript, 'importmap')).to eq('esbuild')
   end
 
   it 'treats missing option as default' do
     ARGV.replace([])
-    expect(cli_option(:javascript, 'importmap')).to eq('importmap')
+    expect(TemplateCLI.cli_option(:javascript, 'importmap')).to eq('importmap')
   end
 
   it 'determines uncomment decision for cssbundling-rails' do
     ARGV.replace(['--javascript=esbuild'])
-    expect(cli_option(:javascript, 'importmap').to_s).to_not eq('importmap')
+    expect(TemplateCLI.cli_option(:javascript, 'importmap').to_s).to_not eq('importmap')
 
     ARGV.replace(['--javascript=importmap'])
-    expect(cli_option(:javascript, 'importmap').to_s).to eq('importmap')
+    expect(TemplateCLI.cli_option(:javascript, 'importmap').to_s).to eq('importmap')
   end
 
   it 'parses boolean flag formats (true/false/0/1 and quoted)' do
     ARGV.replace(['--skip-test=true'])
-    expect(cli_flag?('skip-test')).to be true
+    expect(TemplateCLI.cli_flag?('skip-test')).to be true
 
     ARGV.replace(['--skip-test=false'])
-    expect(cli_flag?('skip-test')).to be false
+    expect(TemplateCLI.cli_flag?('skip-test')).to be false
 
     ARGV.replace(['--skip-test=0'])
-    expect(cli_flag?('skip-test')).to be false
+    expect(TemplateCLI.cli_flag?('skip-test')).to be false
 
     ARGV.replace(['--skip-test=1'])
-    expect(cli_flag?('skip-test')).to be true
+    expect(TemplateCLI.cli_flag?('skip-test')).to be true
 
     ARGV.replace(["--skip-test=\"false\""])
-    expect(cli_flag?('skip-test')).to be false
+    expect(TemplateCLI.cli_flag?('skip-test')).to be false
   end
 
   it 'handles quoted values and values containing spaces' do
     ARGV.replace(["--javascript='es build'"])
-    expect(cli_option(:javascript, 'importmap')).to eq('es build')
+    expect(TemplateCLI.cli_option(:javascript, 'importmap')).to eq('es build')
 
     ARGV.replace(["--javascript=es build"]) # simulate a single ARGV element that includes a space
-    expect(cli_option(:javascript, 'importmap')).to eq('es build')
+    expect(TemplateCLI.cli_option(:javascript, 'importmap')).to eq('es build')
   end
 
   # .railsrc simulation tests
@@ -119,8 +119,8 @@ RSpec.describe 'cli helpers' do
     tokens = Shellwords.shellsplit(railsrc)
     ARGV.replace(tokens)
 
-    expect(cli_option(:javascript, 'importmap')).to eq('esbuild')
-    expect(cli_flag?('skip-test')).to be true
+    expect(TemplateCLI.cli_option(:javascript, 'importmap')).to eq('esbuild')
+    expect(TemplateCLI.cli_flag?('skip-test')).to be true
   end
 
   it 'reads flags from a .railsrc-like string with quoted values and spaces' do
@@ -128,8 +128,8 @@ RSpec.describe 'cli helpers' do
     tokens = Shellwords.shellsplit(railsrc)
     ARGV.replace(tokens)
 
-    expect(cli_option(:javascript, 'importmap')).to eq('es build')
-    expect(cli_option(:other, nil)).to eq('complex value')
-    expect(cli_flag?('skip-test')).to be false
+    expect(TemplateCLI.cli_option(:javascript, 'importmap')).to eq('es build')
+    expect(TemplateCLI.cli_option(:other, nil)).to eq('complex value')
+    expect(TemplateCLI.cli_flag?('skip-test')).to be false
   end
 end

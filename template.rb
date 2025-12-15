@@ -1,17 +1,30 @@
 require "fileutils"
 require "shellwords"
-
-# Load CLI helpers extracted to a separate file
+require "open3"
+require 'net/http'
 require_relative "template_cli_helpers"
 
 def add_template_to_source_path
   source_paths.unshift(File.dirname(__FILE__))
 end
 
+# Memoized JS choice helper so we only query TemplateCLI once
+def js_choice
+  return @js_choice if defined?(@js_choice) && !@js_choice.nil?
+
+  raw = TemplateCLI.cli_option(:javascript, options && options[:javascript])
+  raw = raw.to_s if raw
+  raw = "importmap" if raw.nil? || raw == ""
+  @js_choice = raw
+end
+
 
 def user_responses
-  say "options: #{options.inspect}"   # useful for exploring what's present
-  say "ARGV: #{ARGV.inspect}"         # raw CLI tokens
+  # Capture JS choice early so it's stable for later steps (options/ARGV can change later)
+  raw_js = TemplateCLI.cli_option(:javascript, (defined?(options) ? options && options[:javascript] : nil))
+  raw_js = raw_js.to_s if raw_js
+  raw_js = "importmap" if raw_js.nil? || raw_js == ""
+  @js_choice = raw_js
 
   @testing_response = ask("Would you like to install RSpec for testing: (Y/n)", :green) if options[:skip_test]
   @testing_response = "y" if @testing_response.blank?
@@ -26,12 +39,42 @@ def add_gems
 
   copy_file "config/gems/app.rb", "config/gems/app.rb", force: true
 
+  if js_choice == "importmap"
+    # Uncomment or add bootstrap
+    begin
+      gsub_file "config/gems/app.rb", /^#\s*gem\s+['"]bootstrap['"].*$/, 'gem "bootstrap", "~> 5.3.3"'
+    rescue => _e
+      # ignore if no-op
+    end
+
+    begin
+      gsub_file "config/gems/app.rb", /^#\s*gem\s+['"]dartsass-rails['"].*$/, 'gem "dartsass-rails"'
+    rescue => _e
+      # ignore
+    end
+
+    # If they don't exist at all, append them
+    app_rb = File.read("config/gems/app.rb")
+    unless app_rb.include?("gem \"bootstrap\"")
+      append_to_file "config/gems/app.rb", "\ngem \"bootstrap\", \"~> 5.3.3\"\n"
+    end
+    unless app_rb.include?("gem \"dartsass-rails\"")
+      append_to_file "config/gems/app.rb", "gem \"dartsass-rails\"\n"
+    end
+  else
+    # For bundler-based flows, prefer cssbundling-rails; comment out bootstrap/dartsass if present
+    begin
+      gsub_file "config/gems/app.rb", /^(gem\s+\"bootstrap\".*)$/, '# \1'
+    rescue => _e
+    end
+    begin
+      gsub_file "config/gems/app.rb", /^(gem\s+\"dartsass-rails\".*)$/, '# \1'
+    rescue => _e
+    end
+  end
+
   # If the user selected a JavaScript option other than importmap, enable cssbundling-rails
   # by uncommenting the gem in the copied config/gems/app.rb
-  js_choice = cli_option(:javascript, options && options[:javascript])
-  js_choice = js_choice.to_s if js_choice
-  js_choice = "importmap" if js_choice.nil? || js_choice == ""
-
   if js_choice != "importmap"
     gsub_file "config/gems/app.rb", /#\s*gem\s+['"]cssbundling-rails['"]/, 'gem "cssbundling-rails"'
   end
@@ -67,8 +110,7 @@ def add_static
 end
 
 def setup_styling
-  add_javascript
-
+  js_choice # populates @js_choice via the helper
   if @styling_response == "b"
     add_bootstrap
   elsif @styling_response == "t"
@@ -81,6 +123,8 @@ def setup_styling
 end
 
 def add_javascript
+  return if defined?(@js_choice) && @js_choice == "importmap"
+
   run "yarn add chokidar -D"
 
   run "echo | node -v | cut -c 2- > .node-version"
@@ -109,15 +153,62 @@ def add_esbuild_script
 end
 
 def add_bootstrap
+  if js_choice == "importmap"
+    add_bootstrap_importmap
+  else
+    add_bootstrap_js
+  end
+end
+
+def add_bootstrap_importmap
+  directory "app_bootstrap", "app", force: true
+
+  unless File.exist?("bin/importmap")
+    begin
+      rails_command "importmap:install"
+    rescue => _e
+      if File.exist?("bin/rails")
+        system("bin/rails importmap:install")
+      else
+        system("bundle exec rails importmap:install")
+      end
+    end
+  end
+
+  if File.exist?("bin/importmap")
+    if system("bin/importmap pin bootstrap")
+      say "Pinned bootstrap to importmap (via CDN)", :green
+    else
+      say "Warning: failed to pin bootstrap with importmap. You can run 'bin/importmap pin bootstrap' manually.", :yellow
+    end
+  else
+    say "bin/importmap not found; skipping importmap pinning for bootstrap", :yellow
+  end
+
+  app_js = "app/javascript/application.js"
+  if File.exist?(app_js)
+    content = File.read(app_js)
+    unless content.include?("import \"bootstrap\"") || content.include?("bootstrap")
+      insert_into_file app_js, after: "import \"./controllers\"\n" do
+        "\nimport \"bootstrap\"\n"
+      end
+    end
+  end
+end
+
+def add_bootstrap_js
+  add_javascript
+
   rails_command "css:install:bootstrap"
   add_esbuild_script
 
   directory "app_bootstrap", "app", force: true
-
-  add_esbuild_script
 end
 
 def add_tailwind
+  # Tailwind requires JS tooling for the build step in non-importmap setups
+  add_javascript
+
   rails_command "css:install:tailwind"
 
   run "yarn add flowbite postcss-import postcss-nested"
@@ -131,6 +222,8 @@ def add_tailwind
 end
 
 def add_postcss
+  add_javascript
+
   rails_command "css:install:postcss"
 
   directory "app_postcss", "app", force: true
@@ -138,6 +231,8 @@ def add_postcss
 end
 
 def add_sass
+  add_javascript
+
   rails_command "css:install:sass"
 
   directory "app_sass", "app", force: true
@@ -271,4 +366,28 @@ after_bundle do
   say
   say "To get started with your new app:", :green
   say "  cd #{app_name}"
+end
+
+def pin_pkg_to_cdn(pkg)
+  # Map known packages to safe CDN URLs (ES module builds when available).
+  # These use npm endpoints on jsDelivr. Using @latest allows resolving without contacting importmap packager.
+  case pkg
+  when '@popperjs/core'
+    url = "https://cdn.jsdelivr.net/npm/@popperjs/core@latest/dist/esm/index.js"
+  when 'bootstrap'
+    url = "https://cdn.jsdelivr.net/npm/bootstrap@latest/dist/js/bootstrap.esm.min.js"
+  else
+    # Generic fallback: try the package's module entry via jsdelivr
+    url = "https://cdn.jsdelivr.net/npm/#{pkg}@latest"
+  end
+
+  cmd = "bin/importmap pin #{pkg} --to #{Shellwords.escape(url)}"
+  out, err, status = Open3.capture3(cmd)
+  if status.success?
+    say "Pinned #{pkg} to CDN URL #{url}", :green
+    true
+  else
+    say "Failed to pin #{pkg} to CDN URL #{url}: #{err.lines.first(3).join(' ').strip}", :red
+    false
+  end
 end
