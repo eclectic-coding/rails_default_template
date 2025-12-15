@@ -6,6 +6,9 @@ def add_template_to_source_path
 end
 
 def user_responses
+  say "options: #{options.inspect}"   # useful for exploring what's present
+  say "ARGV: #{ARGV.inspect}"         # raw CLI tokens
+
   @testing_response = ask("Would you like to install RSpec for testing: (Y/n)", :green) if options[:skip_test]
   @testing_response = "y" if @testing_response.blank?
   @styling_response = ask("Would you like to install a style system: bootstrap/tailwind/postcss/sass system? (B/t/p/s)", :green)
