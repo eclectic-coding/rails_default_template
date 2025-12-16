@@ -2,7 +2,7 @@ require "fileutils"
 require "shellwords"
 require "open3"
 require 'net/http'
-require_relative "template_cli_helpers"
+require_relative "script/template_cli_helpers"
 
 def add_template_to_source_path
   source_paths.unshift(File.dirname(__FILE__))
@@ -40,7 +40,6 @@ def add_gems
   copy_file "config/gems/app.rb", "config/gems/app.rb", force: true
 
   if js_choice == "importmap"
-    # Uncomment or add bootstrap
     begin
       gsub_file "config/gems/app.rb", /^#\s*gem\s+['"]bootstrap['"].*$/, 'gem "bootstrap", "~> 5.3.3"'
     rescue => _e

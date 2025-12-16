@@ -4,7 +4,7 @@ require 'rspec'
 require 'shellwords'
 
 # Load the cli helper methods directly from the extracted helper file
-require_relative '../template_cli_helpers'
+require_relative '../script/template_cli_helpers'
 
 RSpec.describe 'cli helpers' do
   after(:each) do
