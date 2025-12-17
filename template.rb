@@ -23,8 +23,17 @@ def user_responses
   raw_js = "importmap" if raw_js.nil? || raw_js == ""
   @js_choice = raw_js
 
-  @testing_response = ask("Would you like to install RSpec for testing: (Y/n)", :green) if options[:skip_test]
-  @testing_response = "y" if @testing_response.blank?
+  # Prefer TemplateCLI helper which reads ARGV, $TEMPLATE_OPTIONS, and options where available
+  if TemplateCLI.cli_flag?(:skip_test)
+    @testing_response = nil
+  else
+    answer = ask("Would you like to install RSpec for testing: (Y/n)", :green)
+    if answer.blank?
+      @testing_response = "y"
+    else
+      @testing_response = answer.strip.downcase.start_with?("y") ? "y" : "n"
+    end
+  end
   @styling_response = ask("Would you like to install a style system: bootstrap/tailwind/postcss/sass system? (B/t/p/s)", :green)
   @styling_response = "b" if @styling_response.blank?
   @ssl_response = ask("Would you like to configure SSL for local development: (Y/n)", :green)
@@ -108,16 +117,54 @@ def add_gems
     end
   end
 
+  # Remove any existing test eval_gemfile lines so we can insert exactly one, idempotently
+  if File.exist?("Gemfile")
+    gsub_file "Gemfile", /\n*eval_gemfile\s+'config\/gems\/rspec_gemfile.rb'\s*\n*/m, ''
+    gsub_file "Gemfile", /\n*eval_gemfile\s+'config\/gems\/minitest_gemfile.rb'\s*\n*/m, ''
+  end
+
   if @testing_response == "y"
+    # Remove any gems listed in the minitest gemfile from the Gemfile
+    if File.exist?("config/gems/minitest_gemfile.rb")
+      minitest_gems = File.read("config/gems/minitest_gemfile.rb").scan(/gem\s+['\"]([^'\"]+)['\"]/).flatten
+      minitest_gems.each do |g_name|
+        gsub_file "Gemfile", /^\s*gem\s+['\"]#{Regexp.escape(g_name)}['\"].*\n/, ''
+      end
+    end
+
+    # Remove test/ directory if present (cleanup prior runs)
+    run "rm -rf test" if Dir.exist?("test")
+
     copy_file "config/gems/rspec_gemfile.rb", "config/gems/rspec_gemfile.rb", force: true
-    inject_into_file "Gemfile", after: "eval_gemfile 'config/gems/app.rb'" do
-      "\neval_gemfile 'config/gems/rspec_gemfile.rb'"
+    # inject only if not already present
+    gemfile_txt = File.read('Gemfile') if File.exist?('Gemfile')
+    unless gemfile_txt && gemfile_txt.include?("eval_gemfile 'config/gems/rspec_gemfile.rb'")
+      inject_into_file "Gemfile", after: "eval_gemfile 'config/gems/app.rb'" do
+        "\neval_gemfile 'config/gems/rspec_gemfile.rb'"
+      end
     end
-  elsif @testing_response.nil?
+  elsif @testing_response == "n"
+    # Remove any gems listed in the rspec gemfile from the Gemfile
+    if File.exist?("config/gems/rspec_gemfile.rb")
+      rspec_gems = File.read("config/gems/rspec_gemfile.rb").scan(/gem\s+['\"]([^'\"]+)['\"]/).flatten
+      rspec_gems.each do |g_name|
+        gsub_file "Gemfile", /^\s*gem\s+['\"]#{Regexp.escape(g_name)}['\"].*\n/, ''
+      end
+    end
+
+    # Remove spec/ and .rspec if present (cleanup prior runs)
+    run "rm -rf spec" if Dir.exist?("spec")
+    run "rm -f .rspec" if File.exist?('.rspec')
+
     copy_file "config/gems/minitest_gemfile.rb", "config/gems/minitest_gemfile.rb", force: true
-    inject_into_file "Gemfile", after: "eval_gemfile 'config/gems/app.rb'" do
-      "\neval_gemfile 'config/gems/minitest_gemfile.rb'"
+    gemfile_txt = File.read('Gemfile') if File.exist?('Gemfile')
+    unless gemfile_txt && gemfile_txt.include?("eval_gemfile 'config/gems/minitest_gemfile.rb'")
+      inject_into_file "Gemfile", after: "eval_gemfile 'config/gems/app.rb'" do
+        "\neval_gemfile 'config/gems/minitest_gemfile.rb'"
+      end
     end
+  else
+    # tests skipped by options; do not inject any test gemfiles
   end
 
   system("ruby -v | awk '{print $2}' > .ruby-version")
@@ -285,14 +332,49 @@ def copy_templates
 end
 
 def setup_testing
+  # Finalize test setup: make sure only the selected framework is present
   if @testing_response == "y"
+    # RSpec selected: remove minitest artifacts and Gemfile evals
+    if File.exist?("Gemfile")
+      gsub_file "Gemfile", /\n*eval_gemfile\s+'config\/gems\/minitest_gemfile.rb'\s*\n*/m, ''
+      if File.exist?("config/gems/minitest_gemfile.rb")
+        minitest_gems = File.read("config/gems/minitest_gemfile.rb").scan(/gem\s+['\"]([^'\"]+)['\"]/).flatten
+        minitest_gems.each do |g_name|
+          gsub_file "Gemfile", /^\s*gem\s+['\"]#{Regexp.escape(g_name)}['\"].*\n/, ''
+        end
+      end
+    end
 
-    gsub_file "bin/ci", "bin/rails test", "bin/rspec"
+    # Remove test directory (cleanup prior/minitest runs)
+    run "rm -rf test" if Dir.exist?("test")
 
-    copy_file ".rspec"
+    # Install RSpec artifacts
+    gsub_file "bin/ci", "bin/rails test", "bin/rspec" if File.exist?("bin/ci")
+    copy_file ".rspec" if File.exist?(".rspec") || File.exist?("config/gems/rspec_gemfile.rb")
     directory "spec", force: true
-  else
+  elsif @testing_response == "n"
+    # Minitest selected: remove RSpec artifacts and Gemfile evals
+    if File.exist?("Gemfile")
+      gsub_file "Gemfile", /\n*eval_gemfile\s+'config\/gems\/rspec_gemfile.rb'\s*\n*/m, ''
+      if File.exist?("config/gems/rspec_gemfile.rb")
+        rspec_gems = File.read("config/gems/rspec_gemfile.rb").scan(/gem\s+['\"]([^'\"]+)['\"]/).flatten
+        rspec_gems.each do |g_name|
+          gsub_file "Gemfile", /^\s*gem\s+['\"]#{Regexp.escape(g_name)}['\"].*\n/, ''
+        end
+      end
+    end
+
+    # Remove spec directory and .rspec
+    run "rm -rf spec" if Dir.exist?("spec")
+    run "rm -f .rspec" if File.exist?(".rspec")
+
+    # Install Minitest artifacts
     copy_file "test/test_helper.rb", force: true
+  else
+    # Tests skipped; remove any RSpec or Minitest helper files to be clean
+    run "rm -rf test" if Dir.exist?("test")
+    run "rm -rf spec" if Dir.exist?("spec")
+    run "rm -f .rspec" if File.exist?(".rspec")
   end
 end
 

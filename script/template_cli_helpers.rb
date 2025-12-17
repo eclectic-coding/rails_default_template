@@ -68,6 +68,18 @@ module TemplateCLI
     key_str = name_str.tr('-', '_')
     key_sym = key_str.to_sym
 
+    # helper to coerce common values to boolean
+    to_bool = ->(v) do
+      return false if v.nil?
+      return v if v == true || v == false
+      if v.is_a?(Numeric)
+        return v != 0
+      end
+      s = v.to_s.strip.downcase
+      return false if s == ''
+      return !(s =~ /\A(false|0)\z/i)
+    end
+
     # prefer test harness global if present
     opts = defined?($TEMPLATE_OPTIONS) ? $TEMPLATE_OPTIONS : nil
 
@@ -90,11 +102,11 @@ module TemplateCLI
 
       if opts_hash
         if opts_hash.key?(key_sym)
-          return !!opts_hash[key_sym]
+          return to_bool.call(opts_hash[key_sym])
         elsif opts_hash.key?(key_str)
-          return !!opts_hash[key_str]
+          return to_bool.call(opts_hash[key_str])
         elsif opts_hash.key?(name_str)
-          return !!opts_hash[name_str]
+          return to_bool.call(opts_hash[name_str])
         end
       end
     end
@@ -102,7 +114,7 @@ module TemplateCLI
     # if explicitly provided as --flag=value, interpret common boolean forms
     if (arg = ARGV.find { |a| a.start_with?("--#{name_str}=") })
       val = arg.split("=", 2)[1].to_s.gsub(/^['"]|['"]$/, '')
-      return !(val =~ /\A(false|0)\z/i)
+      return to_bool.call(val)
     end
 
     ARGV.any? { |a| a == "--#{name_str}" || a.start_with?("--#{name_str}=") }
