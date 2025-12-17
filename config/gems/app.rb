@@ -1,8 +1,11 @@
 gem "annotate"
-gem "cssbundling-rails"
+gem "bootstrap", "~> 5.3.3"
+gem "dartsass-rails"
+# gem "cssbundling-rails"
 gem "inline_svg"
 gem "name_of_person"
 # gem "strong_migrations" # Uncomment if you want to use strong_migrations
+gem "openssl", "~> 3.3", ">= 3.3.2"
 
 group :development, :test do
   gem "erb_lint"

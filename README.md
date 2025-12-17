@@ -32,3 +32,23 @@ There are a few prerequisites. By defaults `rails new` looks in your root direct
 Create new app: `rails new awesome_app -T` if you wish to add rspec
 
 Bypass these settings and this template for a default rails app: `rails new awesome_app --no-rc`
+
+## RSpec support
+
+This template includes helpers to set up RSpec when you create a new app. If you generate a new Rails app with `-T` or choose to enable RSpec during setup, the template will configure RSpec for you. We also include `rspec-rails` in the template's development/test group so you can run the spec generator and use RSpec features.
+
+Running specs locally
+
+- Run the test suite via the included bin runner:
+
+```shell
+./bin/rspec --format documentation
+```
+
+- Or use rake (the default task runs specs):
+
+```shell
+bundle exec rake
+```
+
+This will execute the specs in `spec/` with a readable documentation formatter.

@@ -1,43 +1,46 @@
 require "fileutils"
 require "shellwords"
+require_relative "scripts/template_cli_helpers"
+require_relative "scripts/gem_manager"
 
 def add_template_to_source_path
   source_paths.unshift(File.dirname(__FILE__))
 end
 
-def user_responses
-  say "options: #{options.inspect}"   # useful for exploring what's present
-  say "ARGV: #{ARGV.inspect}"         # raw CLI tokens
+def js_choice
+  return @js_choice if defined?(@js_choice) && !@js_choice.nil?
 
-  @testing_response = ask("Would you like to install RSpec for testing: (Y/n)", :green) if options[:skip_test]
-  @testing_response = "y" if @testing_response.blank?
+  raw = TemplateCLI.cli_option(:javascript, options && options[:javascript])
+  raw = raw.to_s if raw
+  raw = "importmap" if raw.nil? || raw == ""
+  @js_choice = raw
+end
+
+def user_responses
+  raw_js = TemplateCLI.cli_option(:javascript, (defined?(options) ? options && options[:javascript] : nil))
+  raw_js = raw_js.to_s if raw_js
+  raw_js = "importmap" if raw_js.nil? || raw_js == ""
+  @js_choice = raw_js
+
+  # Prefer TemplateCLI helper which reads ARGV, $TEMPLATE_OPTIONS, and options where available
+  if TemplateCLI.cli_flag?(:skip_test)
+    @testing_response = nil
+  else
+    answer = ask("Would you like to install RSpec for testing: (Y/n)", :green)
+    if answer.blank?
+      @testing_response = "y"
+    else
+      @testing_response = answer.strip.downcase.start_with?("y") ? "y" : "n"
+    end
+  end
+
   @styling_response = ask("Would you like to install a style system: bootstrap/tailwind/postcss/sass system? (B/t/p/s)", :green)
   @styling_response = "b" if @styling_response.blank?
-  @ssl_response = ask("Would you like to configure SSL for local development: (Y/n)", :green)
-  @ssl_response = "y" if @ssl_response.blank?
 end
 
 def add_gems
-  run "mkdir config/gems"
-
-  copy_file "config/gems/app.rb", "config/gems/app.rb", force: true
-  inject_into_file "Gemfile", after: "source \"https://rubygems.org\"" do
-    "\n\neval_gemfile 'config/gems/app.rb'"
-  end
-
-  if @testing_response == "y"
-    copy_file "config/gems/rspec_gemfile.rb", "config/gems/rspec_gemfile.rb", force: true
-    inject_into_file "Gemfile", after: "eval_gemfile 'config/gems/app.rb'" do
-      "\neval_gemfile 'config/gems/rspec_gemfile.rb'"
-    end
-  elsif @testing_response.nil?
-    copy_file "config/gems/minitest_gemfile.rb", "config/gems/minitest_gemfile.rb", force: true
-    inject_into_file "Gemfile", after: "eval_gemfile 'config/gems/app.rb'" do
-      "\neval_gemfile 'config/gems/minitest_gemfile.rb'"
-    end
-  end
-
-  system("ruby -v | awk '{print $2}' > .ruby-version")
+  # Delegate to the script helper to keep the template thin and testable.
+  GemManager.apply(self)
 end
 
 def config_generators
@@ -52,8 +55,7 @@ def add_static
 end
 
 def setup_styling
-  add_javascript
-
+  js_choice # populates @js_choice via the helper
   if @styling_response == "b"
     add_bootstrap
   elsif @styling_response == "t"
@@ -66,6 +68,8 @@ def setup_styling
 end
 
 def add_javascript
+  return if js_choice == "importmap"
+
   run "yarn add chokidar -D"
 
   run "echo | node -v | cut -c 2- > .node-version"
@@ -94,15 +98,64 @@ def add_esbuild_script
 end
 
 def add_bootstrap
+  if js_choice == "importmap"
+    add_bootstrap_importmap
+  else
+    add_bootstrap_js
+  end
+end
+
+def add_bootstrap_importmap
+  directory "app_bootstrap", "app", force: true
+
+  unless File.exist?("bin/importmap")
+    begin
+      rails_command "importmap:install"
+    rescue
+      if File.exist?("bin/rails")
+        system("bin/rails importmap:install")
+      else
+        system("bundle exec rails importmap:install")
+      end
+    end
+  end
+
+  if File.exist?("bin/importmap")
+    # Use the simple non-download pin command; do not attempt CA fixes or local installs.
+    if system("bin/importmap pin bootstrap")
+      say "Pinned bootstrap via importmap (no download)", :green
+    else
+      say "Warning: failed to pin bootstrap via importmap. You can run 'bin/importmap pin bootstrap' manually.", :red
+    end
+  else
+    say "bin/importmap not found; skipping importmap pinning for bootstrap", :yellow
+  end
+
+  app_js = "app/javascript/application.js"
+  if File.exist?(app_js)
+    say "Adding import for bootstrap in #{app_js}", :green
+    content = File.read(app_js)
+    unless content.include?("import \"bootstrap\"") || content.include?("bootstrap")
+      insert_into_file app_js, after: "import \"./controllers\"\n" do
+        "\nimport \"bootstrap\"\n"
+      end
+    end
+  end
+end
+
+def add_bootstrap_js
+  add_javascript
+
   rails_command "css:install:bootstrap"
   add_esbuild_script
 
   directory "app_bootstrap", "app", force: true
-
-  add_esbuild_script
 end
 
 def add_tailwind
+  # Tailwind requires JS tooling for the build step in non-importmap setups
+  add_javascript
+
   rails_command "css:install:tailwind"
 
   run "yarn add flowbite postcss-import postcss-nested"
@@ -116,6 +169,8 @@ def add_tailwind
 end
 
 def add_postcss
+  add_javascript
+
   rails_command "css:install:postcss"
 
   directory "app_postcss", "app", force: true
@@ -123,6 +178,8 @@ def add_postcss
 end
 
 def add_sass
+  add_javascript
+
   rails_command "css:install:sass"
 
   directory "app_sass", "app", force: true
@@ -148,14 +205,49 @@ def copy_templates
 end
 
 def setup_testing
+  # Finalize test setup: make sure only the selected framework is present
   if @testing_response == "y"
+    # RSpec selected: remove minitest artifacts and Gemfile evals
+    if File.exist?("Gemfile")
+      gsub_file "Gemfile", /\n*eval_gemfile\s+'config\/gems\/minitest_gemfile.rb'\s*\n*/m, ''
+      if File.exist?("config/gems/minitest_gemfile.rb")
+        minitest_gems = File.read("config/gems/minitest_gemfile.rb").scan(/gem\s+['"]([^'"]+)['"]/).flatten
+        minitest_gems.each do |g_name|
+          gsub_file "Gemfile", /^\s*gem\s+['"]#{Regexp.escape(g_name)}['\"].*\n/, ''
+        end
+      end
+    end
 
-    gsub_file "bin/ci", "bin/rails test", "bin/rspec"
+    # Remove test directory (cleanup prior/minitest runs)
+    run "rm -rf test" if Dir.exist?("test")
 
-    copy_file ".rspec"
+    # Install RSpec artifacts
+    gsub_file "bin/ci", "bin/rails test", "bin/rspec" if File.exist?("bin/ci")
+    copy_file ".rspec" if File.exist?(".rspec") || File.exist?("config/gems/rspec_gemfile.rb")
     directory "spec", force: true
-  else
+  elsif @testing_response == "n"
+    # Minitest selected: remove RSpec artifacts and Gemfile evals
+    if File.exist?("Gemfile")
+      gsub_file "Gemfile", /\n*eval_gemfile\s+'config\/gems\/rspec_gemfile.rb'\s*\n*/m, ''
+      if File.exist?("config/gems/rspec_gemfile.rb")
+        rspec_gems = File.read("config/gems/rspec_gemfile.rb").scan(/gem\s+['"]([^'"]+)['"]/).flatten
+        rspec_gems.each do |g_name|
+          gsub_file "Gemfile", /^\s*gem\s+['"]#{Regexp.escape(g_name)}['\"].*\n/, ''
+        end
+      end
+    end
+
+    # Remove spec directory and .rspec
+    run "rm -rf spec" if Dir.exist?("spec")
+    run "rm -f .rspec" if File.exist?(".rspec")
+
+    # Install Minitest artifacts
     copy_file "test/test_helper.rb", force: true
+  else
+    # Tests skipped; remove any RSpec or Minitest helper files to be clean
+    run "rm -rf test" if Dir.exist?("test")
+    run "rm -rf spec" if Dir.exist?("spec")
+    run "rm -f .rspec" if File.exist?(".rspec")
   end
 end
 
@@ -185,27 +277,7 @@ def run_setup
   end
 end
 
-def local_ssl
-  return unless @ssl_response == "y"
-
-  run "mkdir config/certs"
-  run "mkcert -cert-file config/certs/localhost.crt -key-file config/certs/localhost.key localhost"
-
-  inject_into_file "config/puma.rb", after: "worker_timeout 3600" do
-    <<~RUBY
-        \n
-        ssl_bind(
-        "0.0.0.0",
-        3001,
-        key: ENV.fetch("SSL_KEY_FILE", "config/certs/localhost.key"),
-        cert: ENV.fetch("SSL_CERT_FILE", "config/certs/localhost.crt"),
-        verify_mode: "none"
-      )
-    RUBY
-  end
-
-  gsub_file "Procfile.dev", "bin/rails server", "bin/bundle exec puma -C config/puma.rb"
-end
+# local_ssl removed
 
 def add_binstubs
   run "bundle binstub rubocop"
@@ -221,6 +293,17 @@ end
 def initial_commit
   run "git init"
   run "git add . && git commit -m \"Initial_commit\""
+end
+
+# Complex importmap helpers removed: we standardize on running `bin/importmap pin <pkg>` directly.
+# The previous code attempted CA retries, CDN fallbacks, and local npm installs; that is intentionally
+# removed to keep the template simple and predictable.
+
+# Add support for test harness: if $TEMPLATE_OPTIONS is set, prefer it as the options source
+if defined?($TEMPLATE_OPTIONS)
+  def options
+    $TEMPLATE_OPTIONS
+  end
 end
 
 # Main setup
@@ -239,7 +322,7 @@ after_bundle do
   config_gems
   database_setup
   run_setup
-  local_ssl
+  # local_ssl setup removed for now
   add_binstubs
   lint_code
   initial_commit
@@ -250,3 +333,4 @@ after_bundle do
   say "To get started with your new app:", :green
   say "  cd #{app_name}"
 end
+
