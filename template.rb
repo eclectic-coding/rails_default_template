@@ -37,41 +37,31 @@ def add_gems
   copy_file "config/gems/app.rb", "config/gems/app.rb", force: true
 
   if js_choice == "importmap"
-    # Uncomment any commented gems if present
-    if File.exist?("config/gems/app.rb")
-      gsub_file "config/gems/app.rb", /^#\s*gem\s+['"]bootstrap['"].*$/, 'gem "bootstrap", "~> 5.3.3"'
-      gsub_file "config/gems/app.rb", /^#\s*gem\s+['"]dartsass-rails['"].*$/, 'gem "dartsass-rails"'
-      gsub_file "config/gems/app.rb", /^#\s*gem\s+['"]openssl['"].*$/, 'gem "openssl", "~> 3.3", ">= 3.3.2"'
-    end
+    # For importmap flows we do NOT uncomment existing commented gem lines.
+    # Instead we deterministically insert the required gem lines so there are no
+    # accidental duplicates or order issues.
 
-    # If they don't exist at all, append them
-    app_rb = File.read("config/gems/app.rb")
+    path = "config/gems/app.rb"
+    content = File.read(path)
 
-    # Build list of gem lines to insert (skip ones already present)
+    # Only add the gem lines that are missing (idempotent)
     gems_to_add = []
-    gems_to_add << "gem \"bootstrap\", \"~> 5.3.3\"\n" unless app_rb.match(/gem\s+['"]bootstrap['"]/)
-    gems_to_add << "gem \"dartsass-rails\"\n" unless app_rb.match(/gem\s+['"]dartsass-rails['"]/)
-    gems_to_add << "gem \"openssl\", \"~> 3.3\", \">= 3.3.2\"\n" unless app_rb.match(/gem\s+['"]openssl['"]/)
+    gems_to_add << 'gem "bootstrap", "~> 5.3.3"' unless content.match?(/gem\s+['"]bootstrap['"]/)
+    gems_to_add << 'gem "dartsass-rails"' unless content.match?(/gem\s+['"]dartsass-rails['"]/)
+    gems_to_add << 'gem "openssl", "~> 3.3", ">= 3.3.2"' unless content.match?(/gem\s+['"]openssl['"]/)
 
     if gems_to_add.any?
-      path = "config/gems/app.rb"
-      lines = File.read(path).lines
-
-      # Remove any existing lines for the gems we intend to add to avoid duplicates
-      gem_patterns = [/^\s*gem\s+['"]bootstrap['"]/, /^\s*gem\s+['"]dartsass-rails['"]/, /^\s*gem\s+['"]openssl['"]/]
-      lines.reject! do |l|
-        gem_patterns.any? { |pat| l =~ pat }
-      end
+      lines = content.lines
 
       # find index of the commented strong_migrations line
       idx = lines.index { |l| l =~ /#\s*gem\s+['"]strong_migrations['"]/ }
 
-      insert_block = gems_to_add.join
+      # Prepare insertion block (each gem on its own line)
+      insert_block = gems_to_add.map { |g| g + "\n" }.join
 
       if idx
         # Insert after the strong_migrations comment
-        insert_at = idx + 1
-        lines.insert(insert_at, insert_block)
+        lines.insert(idx + 1, insert_block)
       else
         # Append at end
         lines << "\n" unless lines.last&.end_with?("\n")
