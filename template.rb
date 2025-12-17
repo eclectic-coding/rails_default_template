@@ -36,8 +36,6 @@ def user_responses
 
   @styling_response = ask("Would you like to install a style system: bootstrap/tailwind/postcss/sass system? (B/t/p/s)", :green)
   @styling_response = "b" if @styling_response.blank?
-  @ssl_response = ask("Would you like to configure SSL for local development: (Y/n)", :green)
-  @ssl_response = "y" if @ssl_response.blank?
 end
 
 def add_gems
@@ -213,9 +211,9 @@ def setup_testing
     if File.exist?("Gemfile")
       gsub_file "Gemfile", /\n*eval_gemfile\s+'config\/gems\/minitest_gemfile.rb'\s*\n*/m, ''
       if File.exist?("config/gems/minitest_gemfile.rb")
-        minitest_gems = File.read("config/gems/minitest_gemfile.rb").scan(/gem\s+['\"]([^'\"]+)['\"]/).flatten
+        minitest_gems = File.read("config/gems/minitest_gemfile.rb").scan(/gem\s+['"]([^'"]+)['"]/).flatten
         minitest_gems.each do |g_name|
-          gsub_file "Gemfile", /^\s*gem\s+['\"]#{Regexp.escape(g_name)}['\"].*\n/, ''
+          gsub_file "Gemfile", /^\s*gem\s+['"]#{Regexp.escape(g_name)}['\"].*\n/, ''
         end
       end
     end
@@ -232,9 +230,9 @@ def setup_testing
     if File.exist?("Gemfile")
       gsub_file "Gemfile", /\n*eval_gemfile\s+'config\/gems\/rspec_gemfile.rb'\s*\n*/m, ''
       if File.exist?("config/gems/rspec_gemfile.rb")
-        rspec_gems = File.read("config/gems/rspec_gemfile.rb").scan(/gem\s+['\"]([^'\"]+)['\"]/).flatten
+        rspec_gems = File.read("config/gems/rspec_gemfile.rb").scan(/gem\s+['"]([^'"]+)['"]/).flatten
         rspec_gems.each do |g_name|
-          gsub_file "Gemfile", /^\s*gem\s+['\"]#{Regexp.escape(g_name)}['\"].*\n/, ''
+          gsub_file "Gemfile", /^\s*gem\s+['"]#{Regexp.escape(g_name)}['\"].*\n/, ''
         end
       end
     end
@@ -279,27 +277,7 @@ def run_setup
   end
 end
 
-def local_ssl
-  return unless @ssl_response == "y"
-
-  run "mkdir config/certs"
-  run "mkcert -cert-file config/certs/localhost.crt -key-file config/certs/localhost.key localhost"
-
-  inject_into_file "config/puma.rb", after: "worker_timeout 3600" do
-    <<~RUBY
-        \n
-        ssl_bind(
-        "0.0.0.0",
-        3001,
-        key: ENV.fetch("SSL_KEY_FILE", "config/certs/localhost.key"),
-        cert: ENV.fetch("SSL_CERT_FILE", "config/certs/localhost.crt"),
-        verify_mode: "none"
-      )
-    RUBY
-  end
-
-  gsub_file "Procfile.dev", "bin/rails server", "bin/bundle exec puma -C config/puma.rb"
-end
+# local_ssl removed
 
 def add_binstubs
   run "bundle binstub rubocop"
@@ -344,7 +322,7 @@ after_bundle do
   config_gems
   database_setup
   run_setup
-  local_ssl
+  # local_ssl setup removed for now
   add_binstubs
   lint_code
   initial_commit
