@@ -1,8 +1,7 @@
 require "fileutils"
 require "shellwords"
-require "open3"
-require 'net/http'
-require_relative "script/template_cli_helpers"
+require_relative "scripts/template_cli_helpers"
+require_relative "scripts/gem_manager"
 
 def add_template_to_source_path
   source_paths.unshift(File.dirname(__FILE__))
@@ -34,6 +33,7 @@ def user_responses
       @testing_response = answer.strip.downcase.start_with?("y") ? "y" : "n"
     end
   end
+
   @styling_response = ask("Would you like to install a style system: bootstrap/tailwind/postcss/sass system? (B/t/p/s)", :green)
   @styling_response = "b" if @styling_response.blank?
   @ssl_response = ask("Would you like to configure SSL for local development: (Y/n)", :green)
@@ -41,133 +41,8 @@ def user_responses
 end
 
 def add_gems
-  run "mkdir config/gems"
-
-  copy_file "config/gems/app.rb", "config/gems/app.rb", force: true
-
-  if js_choice == "importmap"
-    # For importmap flows we do NOT uncomment existing commented gem lines.
-    # Instead we deterministically insert the required gem lines so there are no
-    # accidental duplicates or order issues.
-
-    path = "config/gems/app.rb"
-    content = File.read(path)
-
-    # Only add the gem lines that are missing (idempotent)
-    gems_to_add = []
-    gems_to_add << 'gem "bootstrap", "~> 5.3.3"' unless content.match?(/gem\s+['"]bootstrap['"]/)
-    gems_to_add << 'gem "dartsass-rails"' unless content.match?(/gem\s+['"]dartsass-rails['"]/)
-    gems_to_add << 'gem "openssl", "~> 3.3", ">= 3.3.2"' unless content.match?(/gem\s+['"]openssl['"]/)
-
-    if gems_to_add.any?
-      lines = content.lines
-
-      # find index of the commented strong_migrations line
-      idx = lines.index { |l| l =~ /#\s*gem\s+['"]strong_migrations['"]/ }
-
-      # Prepare insertion block (each gem on its own line)
-      insert_block = gems_to_add.map { |g| g + "\n" }.join
-
-      if idx
-        # Insert after the strong_migrations comment
-        lines.insert(idx + 1, insert_block)
-      else
-        # Append at end
-        lines << "\n" unless lines.last&.end_with?("\n")
-        lines << insert_block
-      end
-
-      # Write back the file in one go
-      File.write(path, lines.join)
-    end
-  else
-    # For bundler-based flows, prefer cssbundling-rails; comment out bootstrap/dartsass if present
-    if File.exist?("config/gems/app.rb")
-      gsub_file "config/gems/app.rb", /^(gem\s+['"]bootstrap['"].*)$/, '# \1'
-      gsub_file "config/gems/app.rb", /^(gem\s+['"]dartsass-rails['"].*)$/, '# \1'
-    end
-  end
-
-  # If the user selected a JavaScript option other than importmap, enable cssbundling-rails
-  # by uncommenting the gem in the copied config/gems/app.rb
-  if js_choice != "importmap"
-    gsub_file "config/gems/app.rb", /#\s*gem\s+['"]cssbundling-rails['"]/, 'gem "cssbundling-rails"'
-  end
-
-  # Insert eval_gemfile 'config/gems/app.rb' into the Gemfile. Prefer placing it after a commented
-  # strong_migrations line if present so it's easy for users to find and toggle strong_migrations.
-  gemfile_path = "Gemfile"
-  if File.exist?(gemfile_path)
-    gemfile_content = File.read(gemfile_path)
-    strong_line = gemfile_content.lines.find { |l| l =~ /#\s*gem\s+['"]strong_migrations['"]/ }
-
-    if strong_line
-      inject_into_file gemfile_path, after: strong_line do
-        "\n\neval_gemfile 'config/gems/app.rb'\n"
-      end
-    else
-      inject_into_file gemfile_path, after: "source \"https://rubygems.org\"" do
-        "\n\neval_gemfile 'config/gems/app.rb'\n"
-      end
-    end
-  else
-    # Fallback to originally inject when Gemfile is missing for some reason
-    inject_into_file "Gemfile", after: "source \"https://rubygems.org\"" do
-      "\n\neval_gemfile 'config/gems/app.rb'\n"
-    end
-  end
-
-  # Remove any existing test eval_gemfile lines so we can insert exactly one, idempotently
-  if File.exist?("Gemfile")
-    gsub_file "Gemfile", /\n*eval_gemfile\s+'config\/gems\/rspec_gemfile.rb'\s*\n*/m, ''
-    gsub_file "Gemfile", /\n*eval_gemfile\s+'config\/gems\/minitest_gemfile.rb'\s*\n*/m, ''
-  end
-
-  if @testing_response == "y"
-    # Remove any gems listed in the minitest gemfile from the Gemfile
-    if File.exist?("config/gems/minitest_gemfile.rb")
-      minitest_gems = File.read("config/gems/minitest_gemfile.rb").scan(/gem\s+['\"]([^'\"]+)['\"]/).flatten
-      minitest_gems.each do |g_name|
-        gsub_file "Gemfile", /^\s*gem\s+['\"]#{Regexp.escape(g_name)}['\"].*\n/, ''
-      end
-    end
-
-    # Remove test/ directory if present (cleanup prior runs)
-    run "rm -rf test" if Dir.exist?("test")
-
-    copy_file "config/gems/rspec_gemfile.rb", "config/gems/rspec_gemfile.rb", force: true
-    # inject only if not already present
-    gemfile_txt = File.read('Gemfile') if File.exist?('Gemfile')
-    unless gemfile_txt && gemfile_txt.include?("eval_gemfile 'config/gems/rspec_gemfile.rb'")
-      inject_into_file "Gemfile", after: "eval_gemfile 'config/gems/app.rb'" do
-        "\neval_gemfile 'config/gems/rspec_gemfile.rb'"
-      end
-    end
-  elsif @testing_response == "n"
-    # Remove any gems listed in the rspec gemfile from the Gemfile
-    if File.exist?("config/gems/rspec_gemfile.rb")
-      rspec_gems = File.read("config/gems/rspec_gemfile.rb").scan(/gem\s+['\"]([^'\"]+)['\"]/).flatten
-      rspec_gems.each do |g_name|
-        gsub_file "Gemfile", /^\s*gem\s+['\"]#{Regexp.escape(g_name)}['\"].*\n/, ''
-      end
-    end
-
-    # Remove spec/ and .rspec if present (cleanup prior runs)
-    run "rm -rf spec" if Dir.exist?("spec")
-    run "rm -f .rspec" if File.exist?('.rspec')
-
-    copy_file "config/gems/minitest_gemfile.rb", "config/gems/minitest_gemfile.rb", force: true
-    gemfile_txt = File.read('Gemfile') if File.exist?('Gemfile')
-    unless gemfile_txt && gemfile_txt.include?("eval_gemfile 'config/gems/minitest_gemfile.rb'")
-      inject_into_file "Gemfile", after: "eval_gemfile 'config/gems/app.rb'" do
-        "\neval_gemfile 'config/gems/minitest_gemfile.rb'"
-      end
-    end
-  else
-    # tests skipped by options; do not inject any test gemfiles
-  end
-
-  system("ruby -v | awk '{print $2}' > .ruby-version")
+  # Delegate to the script helper to keep the template thin and testable.
+  GemManager.apply(self)
 end
 
 def config_generators
