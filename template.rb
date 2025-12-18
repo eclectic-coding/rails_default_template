@@ -106,7 +106,7 @@ def add_bootstrap
 end
 
 def add_bootstrap_importmap
-  directory "app_bootstrap", "app", force: true
+  directory "app_bootstrap_importmap", "app", force: true
 
   unless File.exist?("bin/importmap")
     begin
@@ -134,13 +134,15 @@ def add_bootstrap_importmap
   app_js = "app/javascript/application.js"
   if File.exist?(app_js)
     say "Adding import for bootstrap in #{app_js}", :green
-    content = File.read(app_js)
-    unless content.include?("import \"bootstrap\"") || content.include?("bootstrap")
-      insert_into_file app_js, after: "import \"./controllers\"\n" do
-        "\nimport \"bootstrap\"\n"
-      end
+    File.read(app_js)
+    insert_into_file "app/javascript/application.js", before: "import \"controllers\"\n" do
+      "import \"bootstrap\"\n"
     end
+  else
+    say "Warning: #{app_js} not found; cannot add bootstrap import", :red
   end
+
+  system("rm app/assets/stylesheets/application.css") if File.exist?("app/assets/stylesheets/application.css")
 end
 
 def add_bootstrap_js
@@ -254,6 +256,20 @@ end
 def config_gems
   rails_command "generate annotate:install"
 
+  rails_command "dartsass:install"
+
+  if js_choice == "importmap"
+    if @styling_response == "b"
+      inject_into_file "app/assets/stylesheets/application.scss", prepend: "" do
+        <<-SCSS
+  @import "customized_bootstrap";
+  @import "bootstrap";
+  @import "custom";
+        SCSS
+      end
+    end
+  end
+
   inject_into_file "config/routes.rb", after: "Rails.application.routes.draw do\n" do
     <<-RUBY
   mount LetterOpenerWeb::Engine, at: "/letter_opener" if Rails.env.development?\n
@@ -287,7 +303,7 @@ end
 def lint_code
   run "bundle exec rubocop -a"
 
-  run "bundle exec erblint --lint-all -a"
+  run "bundle exec erb_lint --lint-all -a"
 end
 
 def initial_commit
