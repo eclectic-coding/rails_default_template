@@ -293,8 +293,6 @@ def run_setup
   end
 end
 
-# local_ssl removed
-
 def add_binstubs
   run "bundle binstub rubocop"
   run "bundle binstub rspec-core" if @testing_response == "y"
