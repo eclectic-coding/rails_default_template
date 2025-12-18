@@ -191,7 +191,7 @@ def copy_templates
   copy_file ".erb-lint.yml", force: true
   copy_file ".erdconfig", force: true
   copy_file ".gitignore", force: true
-  copy_file "esbuild.config.mjs", force: true
+  copy_file "esbuild.config.mjs", force: true if js_choice == "esbuild"
   copy_file ".rubocop.yml", force: true
   copy_file ".rubocop_todo.yml", force: true
   copy_file "Brewfile"
@@ -322,7 +322,6 @@ after_bundle do
   config_gems
   database_setup
   run_setup
-  # local_ssl setup removed for now
   add_binstubs
   lint_code
   initial_commit
