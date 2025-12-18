@@ -222,7 +222,7 @@ def setup_testing
     run "rm -rf test" if Dir.exist?("test")
 
     # Install RSpec artifacts
-    gsub_file "bin/ci", "bin/rails test", "bin/rspec" if File.exist?("bin/ci")
+    gsub_file "bin/cleanup", "bin/rails test", "bin/rspec" if File.exist?("bin/cleanup")
     copy_file ".rspec" if File.exist?(".rspec") || File.exist?("config/gems/rspec_gemfile.rb")
     directory "spec", force: true
   elsif @testing_response == "n"

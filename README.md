@@ -9,7 +9,7 @@ This is a simple Rails Template to start a new project. It is a template I use t
   - Includes preconfigure FactoryBot (RSPEC), Faker, and Webmock
   - Set up Code Coverage with `simplecov`
 - Set up Rubocop using `rubocop-rails-omakase`
-- Adds code quality and security tools that can be used with `bin/ci`
+- Adds code quality and security tools that can be used with `bin/cleanup`
 - Add static controller and home page
 - Configure rails generators to not generate helpers or stylesheets
 - Create postgresql database and `db:migrate`
