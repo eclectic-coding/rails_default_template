@@ -226,7 +226,7 @@ def setup_testing
     # Install RSpec artifacts
     gsub_file "bin/cleanup", "bin/rails test", "bin/rspec" if File.exist?("bin/cleanup")
     copy_file ".rspec" if File.exist?(".rspec") || File.exist?("config/gems/rspec_gemfile.rb")
-    directory "spec", force: true
+    directory "app_spec", "spec", force: true
   elsif @testing_response == "n"
     # Minitest selected: remove RSpec artifacts and Gemfile evals
     if File.exist?("Gemfile")
