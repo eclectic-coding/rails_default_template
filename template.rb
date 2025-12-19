@@ -16,6 +16,38 @@ def js_choice
   @js_choice = raw
 end
 
+# Helper to determine whether tests should be skipped.
+# Checks in order:
+# 1) TemplateCLI helper flag if available
+# 2) the local `options` hash (when provided by template invocation)
+# 3) the global `$TEMPLATE_OPTIONS` (when set by external callers)
+# 4) direct CLI args in ARGV for `-T` or `--skip-test`
+# This ensures that if any of these surfaces request skipping tests, the
+# interactive test prompt is never shown and test dirs are removed.
+def skip_tests?
+  # TemplateCLI-level flag (preferred)
+  if defined?(TemplateCLI) && TemplateCLI.respond_to?(:cli_flag?)
+    return true if TemplateCLI.cli_flag?(:skip_test)
+  end
+
+  # options provided by template invocations (e.g. via options method)
+  if defined?(options) && options
+    return true if options[:skip_test] || options['skip_test'] || options[:'skip-test'] || options['skip-test']
+  end
+
+  # Add support for external callers that set $TEMPLATE_OPTIONS
+  if defined?($TEMPLATE_OPTIONS) && $TEMPLATE_OPTIONS
+    return true if $TEMPLATE_OPTIONS[:skip_test] || $TEMPLATE_OPTIONS['skip_test'] || $TEMPLATE_OPTIONS[:'skip-test'] || $TEMPLATE_OPTIONS['skip-test']
+  end
+
+  # direct CLI flags
+  if defined?(ARGV) && ARGV.respond_to?(:any?) && ARGV.any?
+    return true if ARGV.any? { |a| a == '-T' || a == '--skip-test' }
+  end
+
+  false
+end
+
 def user_responses
   raw_js = TemplateCLI.cli_option(:javascript, (defined?(options) ? options && options[:javascript] : nil))
   raw_js = raw_js.to_s if raw_js
@@ -23,7 +55,7 @@ def user_responses
   @js_choice = raw_js
 
   # Prefer TemplateCLI helper which reads ARGV, $TEMPLATE_OPTIONS, and options where available
-  if TemplateCLI.cli_flag?(:skip_test)
+  if skip_tests?
     @testing_response = nil
   else
     answer = ask("Would you like to install RSpec for testing: (Y/n)", :green)
