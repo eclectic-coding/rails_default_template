@@ -18,6 +18,7 @@ module TemplateCLI
     opts = defined?($TEMPLATE_OPTIONS) ? $TEMPLATE_OPTIONS : nil
 
     # try to obtain an options object if available (handles cases where options is a method)
+    p "OPTIONS: #{opts.inspect}"
     if opts.nil?
       begin
         opts = options
